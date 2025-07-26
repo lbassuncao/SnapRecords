@@ -1,0 +1,53 @@
+@use 'mixins' as *;
+
+/*=============================================================================================================
+    DRAG-AND-DROP STYLES
+    Purpose:
+    This file contains the `drag-drop-styles` mixin, which provides styles for
+    drag-and-drop interactions, such as column reordering. It includes styles for
+    draggable elements, the element being dragged, and the drop target.
+
+    Usage Example:
+    This mixin is called from the main `SnapRecords.scss` file inside the theme generation
+    loop to apply drag-and-drop styles for each theme.
+    @include drag-drop.drag-drop-styles();
+==============================================================================================================*/
+
+@mixin drag-drop-styles() {
+    .snap-draggable-column {
+        cursor: move;
+        position: relative;
+        z-index: 2;
+    }
+
+    .snap-dragging {
+        opacity: 0.5;
+        background-color: var(--sr-state-drag-background);
+        z-index: 3;
+    }
+
+    .snap-drag-over {
+        border: 2px dashed var(--sr-border-interactive);
+        z-index: 1;
+    }
+
+    .snap-asc-order::after {
+        content: '↑';
+        position: absolute;
+        right: 5px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .snap-desc-order::after {
+        content: '↓';
+        position: absolute;
+        right: 5px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+}
+
+/*=============================================================================================================
+    DRAG-AND-DROP STYLES ENDS HERE
+==============================================================================================================*/

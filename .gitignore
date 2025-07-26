@@ -1,0 +1,49 @@
+# APP SPECIFIC FOLDERS #
+####################################################################################
+
+tmp
+logs
+dist
+vendor
+node_modules
+
+# APP SPECIFIC FILES  #
+####################################################################################
+
+# OS generated files #
+####################################################################################
+
+.DS_Store
+.DS_Store?
+._*
+.Trashes
+.directory
+
+# Tool specific files #
+####################################################################################
+
+#GitHub
+.github
+# vim
+*~
+*.xlsx#
+*.swp
+*.swo
+# sublime text & textmate
+*.sublime-*
+*.stTheme.cache
+*.tmlanguage.cache
+*.tmPreferences.cache
+# Eclipse
+.settings/*
+# JetBrains, aka PHPStorm, IntelliJ IDEA
+.idea/*
+# NetBeans
+nbproject/*
+# Visual Studio Code
+.vscode
+# Sass preprocessor
+.sass-cache/
+.cache
+
+####################################################################################

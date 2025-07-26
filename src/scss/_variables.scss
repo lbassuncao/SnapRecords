@@ -1,0 +1,105 @@
+/*=============================================================================================================
+    DEFINES THEME-SPECIFIC VARIABLES FOR COLORS, SPACING, AND OTHER PROPERTIES.
+    This file contains a map of theme-specific properties used throughout the application.
+    It includes properties for light and dark themes, such as background colors, text colors,
+    primary colors, border colors, and various UI element styles.
+==============================================================================================================*/
+
+$white: #ffffff;
+$gray-50: #f8f9fa;
+$gray-100: #f1f5f8;
+$gray-200: #eaf5fc;
+$gray-300: #e0e0e0;
+$gray-400: #f1f1f1;
+$gray-800: #2c3e50;
+$gray-700: #34495e;
+$gray-600: #3a5368;
+$gray-500: #4a6b89;
+$gray-450: #425a70;
+$blue-500: #3498db;
+$red-700: #c0392b;
+$red-100: #fff0f0;
+$red-200: #f1a9a0;
+$red-900: #5d3834;
+$error-btn-bg: #af4141;
+
+$themes: (
+    light: (
+        // Semantic background colors
+        background: (
+                primary: $white,
+                secondary: $gray-50,
+                interactive-hover: $gray-100,
+                interactive-selected: $gray-200,
+                overlay: rgba($white, 0.7),
+            ),
+        // Semantic text colors
+        text: (
+                primary: $gray-800,
+                on-primary: $white,
+                interactive: $blue-500,
+                error: $red-700,
+                disabled: $gray-500,
+            ),
+        // Border colors
+        border: (
+                primary: $gray-300,
+                interactive: $blue-500,
+            ),
+        // Colors for specific states
+        state: (
+                primary: $blue-500,
+                error-background: $red-100,
+                danger: $red-700,
+                danger-hover: $red-900,
+                drag-background: rgba($blue-500, 0.2),
+                disabled-background: $gray-400,
+            ),
+        // Spacing
+        spacing: (
+                padding: 1rem,
+                margin: 0.5rem,
+            ),
+    ),
+    dark: (
+        // Semantic background colors
+        background: (
+                primary: $gray-800,
+                secondary: $gray-700,
+                interactive-hover: $gray-600,
+                interactive-selected: $gray-500,
+                overlay: rgba($gray-800, 0.8),
+            ),
+        // Semantic text colors
+        text: (
+                primary: $white,
+                on-primary: $white,
+                interactive: $blue-500,
+                error: $red-200,
+                disabled: $gray-500,
+            ),
+        // Border colors
+        border: (
+                primary: $gray-600,
+                interactive: $blue-500,
+            ),
+        // Colors for specific states
+        state: (
+                primary: $blue-500,
+                error-background: $red-900,
+                danger: $red-700,
+                danger-hover: $red-900,
+                drag-background: rgba($blue-500, 0.2),
+                disabled-background: $gray-700,
+            ),
+        // Spacing
+        spacing: (
+                padding: 1rem,
+                margin: 0.5rem,
+            ),
+    ),
+);
+
+/*=============================================================================================================
+    THEME-SPECIFIC VARIABLES FOR COLORS, SPACING, AND OTHER PROPERTIES ENDS HERE
+==============================================================================================================*/

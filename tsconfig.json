@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+        "target": "ES6",
+        "strict": true,
+        "sourceMap": true,
+        "rootDir": "./src",
+        "outDir": "./dist",
+        "module": "esnext",
+        "declaration": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "resolveJsonModule": true,
+        "moduleResolution": "node",
+        "lib": ["ES6", "DOM", "ES2019"],
+        "declarationDir": "./dist/types",
+        "forceConsistentCasingInFileNames": true
+    },
+    "include": ["src"],
+    "exclude": ["node_modules", "dist", "tests"]
+}

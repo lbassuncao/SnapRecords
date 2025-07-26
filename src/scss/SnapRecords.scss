@@ -1,0 +1,88 @@
+/*=============================================================================================================
+    SNAPRECORDS MAIN SCSS FILE
+    This file serves as the main stylesheet for the SnapRecords component.
+    It imports all necessary configurations, variables, and partials,
+    and generates theme-specific styles using a single loop.
+==============================================================================================================*/
+
+// 1. Import core configurations and variables.
+@use 'sass:map';
+@use 'config';
+@use 'variables' as *;
+
+// 2. Import all partials that define style mixins.
+@use 'mixins';
+@use 'base';
+@use 'table';
+@use 'pagination';
+@use 'list';
+@use 'mobile-cards';
+@use 'loading-error';
+@use 'drag-drop';
+
+// 3. The main theme generation loop.
+// It iterates through the $themes map (defined in _variables.scss).
+// For each theme (e.g., 'light', 'dark'), it creates a `.theme-light` or
+// `.theme-dark` wrapper class that defines the CSS variables for that theme.
+@each $theme, $props in $themes {
+    .theme-#{$theme} {
+        // --- Defines the CSS Custom Properties for this theme ---
+
+        // Backgrounds
+        --sr-bg-primary: #{map.get($props, 'background', 'primary')};
+        --sr-bg-secondary: #{map.get($props, 'background', 'secondary')};
+        --sr-bg-interactive-hover: #{map.get($props, 'background', 'interactive-hover')};
+        --sr-bg-interactive-selected: #{map.get($props, 'background', 'interactive-selected')};
+        --sr-bg-overlay: #{map.get($props, 'background', 'overlay')};
+
+        // Text
+        --sr-text-primary: #{map.get($props, 'text', 'primary')};
+        --sr-text-on-primary: #{map.get($props, 'text', 'on-primary')};
+        --sr-text-interactive: #{map.get($props, 'text', 'interactive')};
+        --sr-text-error: #{map.get($props, 'text', 'error')};
+        --sr-text-disabled: #{map.get($props, 'text', 'disabled')};
+
+        // Borders
+        --sr-border-primary: #{map.get($props, 'border', 'primary')};
+        --sr-border-interactive: #{map.get($props, 'border', 'interactive')};
+
+        // States
+        --sr-state-primary: #{map.get($props, 'state', 'primary')};
+        --sr-state-error-background: #{map.get($props, 'state', 'error-background')};
+        --sr-state-danger: #{map.get($props, 'state', 'danger')};
+        --sr-state-danger-hover: #{map.get($props, 'state', 'danger-hover')};
+        --sr-state-drag-background: #{map.get($props, 'state', 'drag-background')};
+        --sr-state-disabled-background: #{map.get($props, 'state', 'disabled-background')};
+
+        // Spacing
+        --sr-spacing-padding: #{map.get($props, 'spacing', 'padding')};
+        --sr-spacing-margin: #{map.get($props, 'spacing', 'margin')};
+
+        // 4. Includes the partials' styles, which will use the variables defined above.
+        @include base.base-styles();
+        @include table.table-styles();
+        @include pagination.pagination-styles();
+        @include list.list-styles();
+        @include mobile-cards.mobile-cards-styles();
+        @include loading-error.loading-error-styles();
+        @include drag-drop.drag-drop-styles();
+    }
+}
+
+// 5. Defines the "default" theme that inherits styles.
+// This class does NOT define the CSS variable values.
+// It only applies the structural styles that USE those variables.
+// The variables are expected to be defined by the host page's stylesheet.
+.theme-default {
+    @include base.base-styles();
+    @include table.table-styles();
+    @include pagination.pagination-styles();
+    @include list.list-styles();
+    @include mobile-cards.mobile-cards-styles();
+    @include loading-error.loading-error-styles();
+    @include drag-drop.drag-drop-styles();
+}
+
+/*=============================================================================================================
+    SNAPRECORDS MAIN SCSS FILE ENDS HERE
+==============================================================================================================*/

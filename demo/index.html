@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SnapRecords Demonstration - Dark Mode</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+
+    <link rel="stylesheet" href="./style.css">
+
+    <style>
+        :root {
+            /* BG */
+            --sr-bg-primary: #ffffff;
+            --sr-bg-secondary: #f8f9fa;
+            --sr-bg-interactive-hover: #e9ecef;
+            --sr-bg-interactive-selected: #cfe2ff;
+            --sr-bg-overlay: rgba(255, 255, 255, 0.7);
+
+            /* Text */
+            --sr-text-primary: #212529;
+            --sr-text-on-primary: #ffffff;
+            --sr-text-interactive: #0d6efd;
+            --sr-text-error: #dc3545;
+            --sr-text-disabled: #6c757d;
+
+            /* Borders */
+            --sr-border-primary: #dee2e6;
+            --sr-border-interactive: #0d6efd;
+
+            /* States */
+            --sr-state-primary: #0d6efd;
+            --sr-state-error-background: #f8d7da;
+            --sr-state-drag-background: rgba(13, 110, 253, 0.2);
+            --sr-state-disabled-background: #e9ecef;
+
+            /* --- LINHAS ADICIONADAS --- */
+            --sr-state-danger: #dc3545;
+            /* Cor de fundo do botão "danger" (vermelho do Bootstrap) */
+            --sr-state-danger-hover: #bb2d3b;
+            /* Cor de hover mais escura */
+
+
+            /* Spacing - doesn't change between modes */
+            --sr-spacing-padding: 1rem;
+            --sr-spacing-margin: 0.5rem;
+        }
+
+        /* Dark mode values */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                /* BG */
+                --sr-bg-primary: #212529;
+                --sr-bg-secondary: #343a40;
+                --sr-bg-interactive-hover: #495057;
+                --sr-bg-interactive-selected: #084298;
+                --sr-bg-overlay: rgba(33, 37, 41, 0.7);
+
+                /* Text */
+                --sr-text-primary: #f8f9fa;
+                --sr-text-on-primary: #ffffff;
+                --sr-text-interactive: #0d6efd;
+                --sr-text-error: #f5c2c7;
+                --sr-text-disabled: #6c757d;
+
+                /* Borders */
+                --sr-border-primary: #495057;
+                --sr-border-interactive: #0d6efd;
+
+                /* States */
+                --sr-state-primary: #0d6efd;
+                --sr-state-error-background: #842029;
+                --sr-state-drag-background: rgba(13, 110, 253, 0.2);
+                --sr-state-disabled-background: #495057;
+
+                /* --- LINHAS ADICIONADAS --- */
+                --sr-state-danger: #dc3545;
+                /* Mantemos o mesmo vermelho forte para impacto */
+                --sr-state-danger-hover: #c9303f;
+                /* Um hover ligeiramente mais claro no tema escuro */
+            }
+        }
+    </style>
+
+</head>
+
+<body>
+    <header class="navbar navbar-dark bg-dark shadow-sm">
+        <div class="container">
+            <h1>
+                <a href="/" class="navbar-brand d-flex align-items-center">
+                    SnapRecords Demonstration
+                </a>
+            </h1>
+        </div>
+    </header>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <aside class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        Features
+                    </div>
+                    <div class="list-group list-group-flush">
+                        <a href="#demo-table" class="list-group-item list-group-item-action">Interactive Table</a>
+                        <a href="#demo-list" class="list-group-item list-group-item-action">List Mode</a>
+                        <a href="#demo-cards" class="list-group-item list-group-item-action">Card Mode</a>
+                    </div>
+                </div>
+            </aside>
+
+            <main class="col-md-9">
+                <section id="demo-table" class="mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h2 class="card-title">Interactive Table (Drag, Resize)</h2>
+                            <p class="card-text">The SnapRecords component rendered as an interactive table.</p>
+                            <div id="container-table">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="demo-list" class="mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h2 class="card-title">List Mode</h2>
+                            <p class="card-text">The SnapRecords component rendered as a simple list.</p>
+                            <div id="container-list">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="demo-cards" class="mb-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h2 class="card-title">Card Mode (Mobile)</h2>
+                            <p class="card-text">The SnapRecords component rendered as cards, ideal for mobile devices.
+                            </p>
+                            <div id="container-cards">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+
+    <script type="module" src="./main.ts"></script>
+</body>
+
+</html>

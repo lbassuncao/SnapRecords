@@ -1,0 +1,77 @@
+@use 'mixins' as *;
+@use 'config' as *;
+
+/*=============================================================================================================
+    PAGINATION CONTROL STYLES
+    Purpose:
+    This file provides the `pagination-styles` mixin, which styles the pagination
+    controls, including buttons for page numbers, next/previous actions, and their
+    various states (active, hover, disabled).
+
+    Usage Example:
+    This mixin is called from the main `SnapRecords.scss` file inside the theme generation
+    loop to apply pagination styles for each theme.
+    @include pagination.pagination-styles();
+==============================================================================================================*/
+
+@mixin pagination-styles() {
+    .snap-pagination-container {
+        display: flex;
+        gap: var(--sr-spacing-margin);
+        @include reset-box;
+
+        button {
+            @include border('all', 1px solid var(--sr-border-primary));
+            @include transition(background-color, color, border-color);
+            padding: 0.2rem 0.8rem;
+            background: var(--sr-bg-primary);
+            border-radius: $border-radius;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--sr-text-primary);
+
+            &:hover:not(:disabled) {
+                background: var(--sr-state-primary);
+                color: var(--sr-text-on-primary);
+                border-color: var(--sr-state-primary);
+            }
+
+            &.snap-active {
+                background: var(--sr-state-primary);
+                color: var(--sr-text-on-primary);
+                border-color: var(--sr-state-primary);
+                cursor: default;
+            }
+
+            &:disabled {
+                cursor: not-allowed;
+                background-color: var(--sr-state-disabled-background);
+                color: var(--sr-text-disabled); // Usar a cor de texto específica para disabled
+                border-color: var(
+                    --sr-border-primary
+                ); // Manter a borda para consistência ou usar 'transparent'
+            }
+
+            &:focus {
+                @include focus-outline;
+            }
+        }
+
+        .snap-pagination-ellipsis {
+            display: flex;
+            align-items: center;
+            padding: 0 var(--sr-spacing-margin);
+            color: var(--sr-text-primary);
+        }
+    }
+
+    .snap-pagination {
+        margin-top: var(--sr-spacing-margin);
+    }
+}
+
+/*=============================================================================================================
+    PAGINATION CONTROL STYLES ENDS HERE
+==============================================================================================================*/

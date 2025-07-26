@@ -1,0 +1,76 @@
+{
+    "files": [
+        "dist"
+    ],
+    "keywords": [
+        "datatable",
+        "data-grid",
+        "table",
+        "grid",
+        "typescript",
+        "vanilla-js",
+        "pagination",
+        "sorting",
+        "filtering",
+        "interactive",
+        "accessible",
+        "component",
+        "library",
+        "dynatable",
+        "jquery-dynatable"
+    ],
+    "type": "module",
+    "version": "1.0.0",
+    "name": "snap-records",
+    "dependencies": {
+        "dexie": "^4.0.11",
+        "immer": "^10.1.1",
+        "lru-cache": "^11.1.0"
+    },
+    "types": "./dist/index.d.ts",
+    "main": "./dist/snap-records.umd.js",
+    "module": "./dist/snap-records.es.js",
+    "exports": {
+        ".": {
+            "import": "./dist/snap-records.es.js",
+            "require": "./dist/snap-records.umd.js"
+        }
+    },
+    "devDependencies": {
+        "@testing-library/dom": "^10.4.0",
+        "@types/jest": "^30.0.0",
+        "@types/lru-cache": "^7.10.9",
+        "@types/node": "^24.0.3",
+        "@typescript-eslint/eslint-plugin": "^8.35.0",
+        "@typescript-eslint/parser": "^8.35.0",
+        "eslint": "^9.29.0",
+        "eslint-config-prettier": "^10.1.5",
+        "eslint-plugin-prettier": "^5.5.1",
+        "fake-indexeddb": "^6.0.1",
+        "identity-obj-proxy": "^3.0.0",
+        "jest": "^30.0.4",
+        "jest-environment-jsdom": "^30.0.4",
+        "prettier": "^3.6.1",
+        "sass": "^1.89.2",
+        "terser": "^5.43.1",
+        "ts-jest": "^29.4.0",
+        "typescript": "^5.8.3",
+        "typescript-eslint": "^8.35.0",
+        "vite": "^6.3.5",
+        "vite-plugin-dts": "^4.5.4"
+    },
+    "scripts": {
+        "dev": "vite",
+        "test": "jest",
+        "build:js": "vite build",
+        "preview": "vite preview",
+        "lint": "eslint \"src/**/*.{js,ts}\"",
+        "lint:fix": "eslint \"src/**/*.{js,ts}\" --fix",
+        "build": "npm run build:js && npm run build:css",
+        "demo:dev": "vite demo --config vite.config.demo.ts",
+        "demo:build": "vite build demo --config vite.config.demo.ts",
+        "format": "prettier --write \"src/**/*.{js,ts,json,scss,md}\"",
+        "build:css": "sass src/scss/SnapRecords.scss dist/snap-records.css --style=compressed --source-map"
+    },
+    "description": "A powerful and flexible TypeScript data grid component for modern web applications. Features server-side data handling, multiple rendering modes, extensive customization, and full accessibility support."
+}

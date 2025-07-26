@@ -1,0 +1,69 @@
+@use 'mixins' as *;
+@use 'config' as *;
+
+/*=============================================================================================================
+    LOADING AND ERROR STATE STYLES
+    Purpose:
+    This file defines the `loading-error-styles` mixin, which handles the visual
+    states for loading (e.g., a loading overlay) and error messages (e.g., an error banner).
+==============================================================================================================*/
+
+@mixin loading-error-styles() {
+    .snap-loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: var(--sr-bg-overlay);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        font-size: $font-size-large;
+        color: var(--sr-text-primary);
+        font-weight: 500;
+    }
+
+    .snap-records-error {
+        @include border('left', 4px solid var(--sr-text-error));
+        padding: var(--sr-spacing-padding);
+        background: var(--sr-state-error-background);
+        margin-bottom: var(--sr-spacing-margin);
+        border-radius: $border-radius;
+        color: var(--sr-text-error);
+        display: none;
+    }
+
+    // Styles for the "Retry" button
+    .snap-retry-button {
+        padding: 0.5rem 1rem;
+        font-size: $font-size-base;
+        font-weight: 600;
+        color: var(--sr-text-on-primary); // High-contrast white text
+        background-color: var(--sr-state-danger); // Uses the danger background color
+        border: 1px solid transparent;
+        border-radius: $border-radius;
+        cursor: pointer;
+        display: inline-block;
+        text-align: center;
+        text-decoration: none;
+        vertical-align: middle;
+        user-select: none;
+        margin-top: 1rem;
+        @include transition(color, background-color, border-color, box-shadow);
+
+        &:hover {
+            background-color: var(--sr-state-danger-hover); // Uses the danger hover color
+            border-color: var(--sr-state-danger-hover);
+        }
+
+        &:focus {
+            @include focus-outline;
+        }
+    }
+}
+
+/*=============================================================================================================
+    LOADING AND ERROR STATE STYLES ENDS HERE
+==============================================================================================================*/

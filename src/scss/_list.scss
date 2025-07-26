@@ -1,0 +1,41 @@
+@use 'mixins' as *;
+
+/*=============================================================================================================
+    LIST VIEW STYLES
+    Purpose:
+    This file defines the `list-styles` mixin for the "list" rendering mode. It styles
+    a simple vertical list of items, including hover and selected states.
+
+    Usage Example:
+    This mixin is called from the main `SnapRecords.scss` file inside the theme generation
+    loop to apply list view styles for each theme.
+    @include list.list-styles();
+==============================================================================================================*/
+
+@mixin list-styles() {
+    .snap-list {
+        list-style: none;
+        @include reset-box;
+
+        .snap-list-item {
+            cursor: pointer;
+            @include border();
+            color: var(--sr-text-primary);
+            @include transition(background-color);
+            padding: 0.8rem var(--sr-spacing-padding);
+            background: var(--sr-bg-primary);
+
+            &:hover {
+                background-color: var(--sr-bg-interactive-hover);
+            }
+
+            &.snap-selected {
+                background-color: var(--sr-bg-interactive-selected);
+            }
+        }
+    }
+}
+
+/*=============================================================================================================
+    LIST VIEW STYLES ENDS HERE
+==============================================================================================================*/

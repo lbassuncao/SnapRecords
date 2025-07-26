@@ -1,0 +1,147 @@
+@use 'mixins' as *;
+@use 'config' as *;
+
+/*=============================================================================================================
+    TABLE VIEW STYLES
+    Purpose:
+    This file defines the `table-styles` mixin, which contains all styles related to the
+    traditional table view, including the header, body, rows, and cells. It handles states
+    like hover, selection, and resizing.
+
+    Usage Example:
+    This mixin is called from the main `SnapRecords.scss` file inside the theme generation
+    loop to apply table-specific styles for each theme.
+    @include table.table-styles();
+==============================================================================================================*/
+
+@mixin table-styles() {
+    .snap-records-header {
+        background-color: var(--sr-bg-secondary);
+        color: var(--sr-text-primary);
+
+        th {
+            @include border();
+            @include border('right');
+
+            &:last-child {
+                border-right: none;
+            }
+
+            padding: var(--sr-spacing-padding);
+            text-align: left;
+            font-weight: 600;
+            position: relative;
+            resize: horizontal;
+            overflow: hidden;
+
+            a {
+                color: var(--sr-text-primary);
+                text-decoration: none;
+                display: block;
+                position: relative;
+                padding-right: 20px;
+
+                &:focus {
+                    @include focus-outline;
+                }
+            }
+
+            .snap-column-resize-handle {
+                position: absolute;
+                top: 0;
+                right: 0;
+                width: 6px;
+                height: 100%;
+                cursor: col-resize;
+                background-color: transparent; // O handle é apenas uma área de interação
+            }
+        }
+    }
+
+    .snap-records-body {
+        tr {
+            @include border();
+            background-color: var(--sr-bg-primary);
+            @include transition(background-color);
+
+            &:hover {
+                background-color: var(--sr-bg-interactive-hover);
+            }
+
+            &.snap-selected,
+            &.snap-current-row {
+                background-color: var(--sr-bg-interactive-selected);
+            }
+
+            &.snap-current-row {
+                @include box-shadow(inset 0 0 0 2px var(--sr-state-primary));
+            }
+        }
+
+        td {
+            @include border();
+            @include border('right');
+
+            &:last-child {
+                border-right: none;
+            }
+
+            padding: 0.8rem var(--sr-spacing-padding);
+            vertical-align: top;
+            min-width: 50px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            box-sizing: border-box;
+        }
+    }
+
+    .snap-records-footer {
+        td {
+            @include reset-box;
+        }
+
+        .snap-records-footer-container {
+            @include border(top);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--sr-spacing-padding);
+            background: var(--sr-bg-secondary);
+            color: var(--sr-text-primary);
+        }
+    }
+
+    .snap-totals {
+        font-size: $font-size-small;
+        color: var(--sr-text-primary);
+    }
+
+    .snap-no-data {
+        text-align: center;
+        padding: 2rem;
+        color: var(--sr-text-primary);
+        font-style: italic;
+        grid-column: 1 / -1;
+    }
+
+    .snap-record-start,
+    .snap-totals strong {
+        font-weight: bold;
+        color: var(--sr-text-primary);
+    }
+
+    .snap-record-end {
+        font-weight: bold;
+        color: var(--sr-text-interactive);
+    }
+
+    .snap-records-total {
+        font-weight: bold;
+        color: var(--sr-text-error);
+    }
+}
+
+/*=============================================================================================================
+    TABLE VIEW STYLES ENDS HERE
+==============================================================================================================*/

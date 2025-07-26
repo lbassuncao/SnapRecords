@@ -1,0 +1,75 @@
+@use 'mixins' as *;
+@use 'config' as *;
+
+/*=============================================================================================================
+    MOBILE CARDS VIEW STYLES
+    Purpose:
+    This file provides the `mobile-cards-styles` mixin, which defines the styles for
+    displaying records as individual cards. This view is often used for mobile or responsive
+    layouts. It includes styles for the card container and individual cards.
+
+    Usage Example:
+    This mixin is called from the main `SnapRecords.scss` file inside the theme generation
+    loop to apply the card view styles for each theme.
+    @include mobile-cards.mobile-cards-styles();
+==============================================================================================================*/
+
+@mixin mobile-cards-styles() {
+    .snap-mobile-cards-container {
+        display: flex;
+        flex-direction: column;
+        gap: var(--sr-spacing-margin);
+        padding: var(--sr-spacing-padding);
+
+        @media (min-width: $breakpoint-md) {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+    }
+
+    .snap-mobile-card {
+        @include border('all', 1px solid var(--sr-border-primary));
+        @include box-shadow;
+        @include transition(background-color);
+        background: var(--sr-bg-primary);
+        border-radius: $border-radius;
+        padding: var(--sr-spacing-padding);
+        cursor: pointer;
+        color: var(--sr-text-primary);
+
+        &:hover {
+            background-color: var(--sr-bg-interactive-hover);
+        }
+
+        &.snap-selected {
+            background-color: var(--sr-bg-interactive-selected);
+        }
+
+        .snap-card-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.3rem 0;
+        }
+
+        .snap-card-label {
+            font-weight: 600;
+            color: var(--sr-text-primary);
+            margin-right: var(--sr-spacing-margin);
+        }
+
+        .snap-card-value {
+            color: var(--sr-text-primary);
+        }
+    }
+
+    .snap-footer {
+        @include border(top);
+        padding: var(--sr-spacing-padding);
+        background: var(--sr-bg-secondary);
+        color: var(--sr-text-primary);
+    }
+}
+
+/*=============================================================================================================
+    MOBILE CARDS VIEW STYLES ENDS HERE
+==============================================================================================================*/

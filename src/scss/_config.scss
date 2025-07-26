@@ -1,0 +1,35 @@
+/*=============================================================================================================
+    GLOBAL CONFIGURATION FOR SNAPRECORDS STYLES.
+    This file centralizes common, non-theme-specific settings like fonts, sizes, and breakpoints.
+    It is used to define the base styles that can be extended or overridden in theme-specific files.
+    This file should not contain any theme-specific styles or variables.
+    Instead, it should focus on global settings that apply to all themes.
+    Usage:
+    Import this file in your main SCSS file to ensure all components have a consistent base.
+    @import 'config';
+==============================================================================================================*/
+
+// Default font stack for the entire component.
+$font-stack:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans',
+    'Helvetica Neue', sans-serif;
+
+// Base font sizes.
+$font-size-base: 1rem;
+$font-size-small: 0.9rem;
+$font-size-large: 1.2rem;
+
+// Default border radius for elements like containers, buttons, and cards.
+$border-radius: 4px;
+
+// Default box shadow for a subtle depth effect.
+$box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+// Breakpoints for responsive design.
+$breakpoint-sm: 576px;
+$breakpoint-md: 768px;
+$breakpoint-lg: 992px;
+
+/*=============================================================================================================
+    GLOBAL CONFIGURATION FOR SNAPRECORDS STYLES ENDS HERE
+==============================================================================================================*/

@@ -1,0 +1,28 @@
+.container h1 a {
+    font-size: 2.75rem;
+    margin-top: 1.40rem;
+    margin-left: 1.75rem;
+}
+
+h2.card-title {
+    font-weight: 600;
+    font-size: 2.25rem;
+    font-variant: small-caps;
+    border-bottom: 2px solid black;
+}
+
+.snap-footer,
+.snap-records-footer {
+    border-bottom: 1px solid black;
+}
+
+[data-bs-theme="dark"] {
+    .snap-footer,
+    .snap-records-footer {
+        border-bottom: 1px solid #ABABAB;
+    }
+
+    h2.card-title {
+        border-bottom: 2px solid #ABABAB;
+    }
+}

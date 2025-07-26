@@ -1,0 +1,52 @@
+@use 'config' as *;
+@use 'variables' as *;
+
+/*=============================================================================================================
+    REUSABLE STYLE MIXINS
+    Purpose:
+    This file provides a collection of reusable style patterns (mixins) for the SnapRecords
+    component. These mixins help maintain consistency and reduce code repetition.
+
+    Usage Example:
+    Import this file using `@use 'mixins' as *;` in other partials and call the mixins
+    where needed.
+    @include border('top');
+    @include transition(color, background-color);
+==============================================================================================================*/
+
+@mixin reset-box {
+    margin: 0;
+    padding: 0;
+}
+
+@mixin border($position: bottom, $style: 1px solid var(--sr-border-primary)) {
+    @if $position == bottom {
+        border-bottom: $style;
+    } @else if $position == right {
+        border-right: $style;
+    } @else if $position == top {
+        border-top: $style;
+    } @else if $position == left {
+        border-left: $style;
+    } @else if $position == all {
+        border: $style;
+    }
+}
+
+@mixin transition($properties...) {
+    transition: $properties 0.2s;
+}
+
+@mixin box-shadow($value: $box-shadow) {
+    box-shadow: $value;
+}
+
+@mixin focus-outline {
+    // A cor do foco agora é controlada por uma variável CSS para adaptabilidade
+    outline: 2px solid var(--sr-state-primary);
+    outline-offset: 2px;
+}
+
+/*=============================================================================================================
+   REUSABLE STYLE MIXINS ENDS HERE
+==============================================================================================================*/

@@ -1,0 +1,32 @@
+{
+    "loading": "Loading...",
+    "totalRecords": "Total records: {total}",
+    "filteredRecords": "Filtered records: {filtered}",
+    "previous": "Previous",
+    "next": "Next",
+    "errorTitle": "Error",
+    "errorMessage": "An error occurred.",
+    "noDataAvailable": "No data available.",
+    "columnResizeHandle": "Resize column",
+    "sortAscending": "Sort ascending",
+    "sortDescending": "Sort descending",
+    "removeSort": "Remove sort",
+    "rowSelected": "Row selected",
+    "rowDeselected": "Row deselected",
+    "currentPage": "Current page: {page}",
+    "pageNavigation": "Page navigation",
+    "loadMore": "Load More",
+    "jumpToPage": "Jump to page",
+    "retry": "Retry",
+    "dragColumn": "Drag column {col}",
+    "errors": {
+        "containerNotFound": "Container not found.",
+        "invalidConfig": "Invalid configuration.",
+        "dataLoadingFailed": "Failed to load data: {error}",
+        "renderFailed": "Failed to render: {error}",
+        "generic": "An error occurred."
+    },
+    "pagination": {
+        "showingRecords": "Showing {start} to {end} of {total} records"
+    }
+}

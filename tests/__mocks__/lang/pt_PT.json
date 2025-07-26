@@ -1,0 +1,32 @@
+{
+    "loading": "A carregar...",
+    "totalRecords": "Total de registos: {total}",
+    "filteredRecords": "Registros filtrados: {filtered}",
+    "previous": "Anterior",
+    "next": "Próximo",
+    "errorTitle": "Erro",
+    "errorMessage": "Ocorreu um erro.",
+    "noDataAvailable": "Nenhum dado disponível.",
+    "columnResizeHandle": "Redimensionar coluna",
+    "sortAscending": "Ordenar ascendente",
+    "sortDescending": "Ordenar descendente",
+    "removeSort": "Remover ordenação",
+    "rowSelected": "Linha selecionada",
+    "rowDeselected": "Linha desmarcada",
+    "currentPage": "Página atual: {page}",
+    "pageNavigation": "Navegação de página",
+    "loadMore": "Carregar Mais",
+    "jumpToPage": "Ir para a página",
+    "retry": "Tentar novamente",
+    "dragColumn": "Arrastar coluna {col}",
+    "errors": {
+        "containerNotFound": "Container não encontrado.",
+        "invalidConfig": "Configuração inválida.",
+        "dataLoadingFailed": "Falha ao carregar dados: {error}",
+        "renderFailed": "Falha ao renderizar: {error}",
+        "generic": "Ocorreu um erro."
+    },
+    "pagination": {
+        "showingRecords": "A mostrar {start} de {end} de um total {total} de registos"
+    }
+}

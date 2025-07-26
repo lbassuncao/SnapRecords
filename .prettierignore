@@ -1,0 +1,10 @@
+# Ficheiros e pastas gerados pelo build e dependências
+node_modules/
+dist/
+coverage/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

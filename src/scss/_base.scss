@@ -1,0 +1,56 @@
+@use 'mixins' as *;
+@use 'config' as *;
+
+/*=============================================================================================================
+    BASE COMPONENT STYLES
+    Purpose:
+    This file contains the `base-styles` mixin, which defines the fundamental structural
+    styles for the SnapRecords component, such as the main container, content area,
+    and the base table layout.
+
+    Usage Example:
+    This mixin is called from the main `SnapRecords.scss` file inside the theme generation
+    loop to apply the base styles for each theme.
+    @include base.base-styles();
+==============================================================================================================*/
+
+@mixin base-styles() {
+    .snap-records-container {
+        @include box-shadow;
+        position: relative;
+        font-family: $font-stack;
+        border-radius: $border-radius;
+        min-height: 200px;
+        background-color: var(--sr-bg-primary);
+        color: var(--sr-text-primary);
+        padding: var(--sr-spacing-padding);
+    }
+
+    .snap-records-content {
+        position: relative;
+        min-height: 300px;
+        display: block;
+        overflow: visible;
+    }
+
+    .snap-records {
+        @include reset-box;
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--sr-bg-primary);
+        color: var(--sr-text-primary);
+        table-layout: fixed;
+    }
+
+    .snap-records-body {
+        position: relative;
+    }
+
+    .snap-table-responsive {
+        overflow-x: auto;
+    }
+}
+
+/*=============================================================================================================
+    BASE COMPONENT STYLES ENDS HERE
+==============================================================================================================*/
