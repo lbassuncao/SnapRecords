@@ -1,7 +1,7 @@
 # SnapRecords
 
 <p align="center">
-  <img src="https://github.com/lbassuncao/SnapRecords/blob/main/docs/snap-records.png?raw=true" alt="SnapRecords Logo" width="256">
+  <img src="https://github.com/lbassuncao/SnapRecords/blob/main/docs/SnapRecords.png?raw=true" alt="SnapRecords Logo" width="256">
 </p>
 
 <p align="center">
