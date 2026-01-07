@@ -47,22 +47,30 @@ It supports server-side pagination, sorting, filtering, caching, multiple render
 
 To quickly set up SnapRecords:
 
-1. Install dependencies:
+1. **Install via NPM**:
     ```bash
-    npm install dexie immer lru-cache
+    npm install snap-records
     ```
-2. Include the compiled CSS:
+
+2. **Include Styles**:
+    If using a bundler (Vite, Webpack, etc.):
+    ```typescript
+    import 'snap-records/dist/snap-records.css';
+    ```
+    Or via HTML:
     ```html
-    <link rel="stylesheet" href="/path/to/snap-records.css" />
+    <link rel="stylesheet" href="/node_modules/snap-records/dist/snap-records.css" />
     ```
-3. Create a container:
+
+3. **Create a container**:
     ```html
     <div id="table-container"></div>
     ```
-4. Initialize SnapRecords:
+
+4. **Initialize SnapRecords**:
 
     ```typescript
-    import { SnapRecords, RowsPerPage } from './SnapRecords';
+    import { SnapRecords, RowsPerPage } from 'snap-records';
 
     new SnapRecords('table-container', {
         url: 'https://api.example.com/data',
@@ -73,6 +81,12 @@ To quickly set up SnapRecords:
     ```
 
 ## Installation
+
+### NPM (Recommended)
+
+```bash
+npm install snap-records
+```
 
 ### Prerequisites
 
@@ -141,7 +155,7 @@ npm install dexie immer lru-cache
 A minimal setup with a table displaying user data:
 
 ```typescript
-import { SnapRecords, RowsPerPage } from './SnapRecords';
+import { SnapRecords, RowsPerPage } from 'snap-records';
 
 const snapRecords = new SnapRecords('table-container', {
     url: '/api/users',
@@ -156,7 +170,7 @@ const snapRecords = new SnapRecords('table-container', {
 Enabling row selection, custom formatting, and disabling sorting on a column:
 
 ```typescript
-import { SnapRecords, RenderType, RowsPerPage } from './SnapRecords';
+import { SnapRecords, RenderType, RowsPerPage } from 'snap-records';
 
 const snapRecords = new SnapRecords('table-container', {
     url: '/api/users',
@@ -179,7 +193,7 @@ console.log(api.getSelectedRows());
 Using all available options:
 
 ```typescript
-import { SnapRecords, RenderType, RowsPerPage } from './SnapRecords';
+import { SnapRecords, RenderType, RowsPerPage } from 'snap-records';
 
 const snapRecords = new SnapRecords('table-container', {
     url: 'https://api.example.com/data',
