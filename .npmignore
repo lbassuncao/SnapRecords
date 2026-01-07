@@ -1,0 +1,29 @@
+# Ignore source files
+src/
+tests/
+demo/
+wrappers/
+docs/
+
+# Ignore config files
+.github/
+.vscode/
+vite.config.ts
+vite.config.demo.ts
+tsconfig.json
+eslint.config.js
+jest.config.js
+.prettierrc.json
+.prettierignore
+.gitattributes
+.gitignore
+
+# Ignore logs
+debug.log
+npm-debug.log
+
+# KEEP:
+# dist/
+# README.md
+# LICENSE
+# package.json
