@@ -1,9 +1,4 @@
 {
-    "files": [
-        "dist",
-        "LICENSE",
-        "README.md"
-    ],
     "keywords": [
         "datatable",
         "data-grid",
@@ -22,7 +17,7 @@
         "jquery-dynatable"
     ],
     "type": "module",
-    "version": "1.1.6",
+    "version": "1.1.7",
     "name": "snap-records",
     "dependencies": {
         "dexie": "^4.0.11",
