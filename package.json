@@ -21,7 +21,7 @@
         "jquery-dynatable"
     ],
     "type": "module",
-    "version": "1.1.3",
+    "version": "1.1.4",
     "name": "snap-records",
     "dependencies": {
         "dexie": "^4.0.11",
@@ -74,5 +74,13 @@
         "build:css": "sass src/scss/SnapRecords.scss dist/snap-records.css --style=compressed --source-map"
     },
     "description": "A powerful and flexible TypeScript data grid component for modern web applications. Features server-side data handling, multiple rendering modes, extensive customization, and full accessibility support.",
-    "license": "MIT"
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/lbassuncao/SnapRecords.git"
+    },
+    "bugs": {
+        "url": "https://github.com/lbassuncao/SnapRecords/issues"
+    },
+    "homepage": "https://github.com/lbassuncao/SnapRecords#readme"
 }
