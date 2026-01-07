@@ -47,7 +47,7 @@ export class StateManager<T extends Identifiable & Record<string, unknown>> {
         // Only update if the state has changed
         if (nextState !== this.#parent.state) {
             this.#parent.state = nextState as SnapRecordsState<T>;
-            log(this.#parent.debug, LogLevel.INFO, 'State updated.', this.#parent.state); 
+            log(this.#parent.debug, LogLevel.INFO, 'State updated.', this.#parent.state);
             // Persist state to storage and update URL
             this.saveStateToStorage();
             this.updateURLState();
@@ -58,7 +58,7 @@ export class StateManager<T extends Identifiable & Record<string, unknown>> {
     public updateURLState(): void {
         // Skip if URL state persistence is disabled
         if (!this.#parent.usePushState) return;
-        log(this.#parent.debug, LogLevel.INFO, 'Updating URL with current state.'); 
+        log(this.#parent.debug, LogLevel.INFO, 'Updating URL with current state.');
         // Create URLSearchParams to hold query parameters
         const params = new URLSearchParams();
         params.set('page', this.#parent.state.currentPage.toString());
@@ -80,11 +80,11 @@ export class StateManager<T extends Identifiable & Record<string, unknown>> {
     public loadFromURL(): void {
         // Skip if URL state persistence is disabled
         if (!this.#parent.usePushState) return;
-        log(this.#parent.debug, LogLevel.INFO, 'Loading state from URL parameters...'); 
+        log(this.#parent.debug, LogLevel.INFO, 'Loading state from URL parameters...');
         // Parse URL query parameters
         const params = new URLSearchParams(window.location.search);
         if (params.toString() === '') {
-            log(this.#parent.debug, LogLevel.INFO, 'No URL parameters to load.'); 
+            log(this.#parent.debug, LogLevel.INFO, 'No URL parameters to load.');
             return;
         }
 
@@ -155,7 +155,7 @@ export class StateManager<T extends Identifiable & Record<string, unknown>> {
             clearTimeout(this.#saveDebounceTimer);
         }
 
-        log(this.#parent.debug, LogLevel.INFO, 'Saving state to localStorage...'); 
+        log(this.#parent.debug, LogLevel.INFO, 'Saving state to localStorage...');
 
         // Extract relevant state properties
         const {
@@ -182,10 +182,15 @@ export class StateManager<T extends Identifiable & Record<string, unknown>> {
             try {
                 // Save state to localStorage
                 localStorage.setItem(this.#parent.storageKey, JSON.stringify(stateToSave));
-                log(this.#parent.debug, LogLevel.INFO, 'State saved successfully.'); 
+                log(this.#parent.debug, LogLevel.INFO, 'State saved successfully.');
             } catch (error) {
                 // Log error and continue
-                log(this.#parent.debug, LogLevel.ERROR, 'Could not save state to localStorage.', error); 
+                log(
+                    this.#parent.debug,
+                    LogLevel.ERROR,
+                    'Could not save state to localStorage.',
+                    error
+                );
             }
         }, this.#DEBOUNCE_TIMEOUT_MS);
     }
@@ -194,17 +199,17 @@ export class StateManager<T extends Identifiable & Record<string, unknown>> {
     public loadStateFromStorage(): void {
         // Skip if state persistence is disabled
         if (!this.#parent.persistState) return;
-        log(this.#parent.debug, LogLevel.INFO, 'Attempting to load state from localStorage...'); 
+        log(this.#parent.debug, LogLevel.INFO, 'Attempting to load state from localStorage...');
         try {
             // Retrieve saved state
             const savedStateJSON = localStorage.getItem(this.#parent.storageKey);
             if (!savedStateJSON) {
-                log(this.#parent.debug, LogLevel.INFO, 'No saved state found in localStorage.'); 
+                log(this.#parent.debug, LogLevel.INFO, 'No saved state found in localStorage.');
                 return;
             }
             // Parse saved state
             const savedState = JSON.parse(savedStateJSON) as Partial<PersistedState>;
-            log(this.#parent.debug, LogLevel.INFO, 'Saved state found, applying...', savedState); 
+            log(this.#parent.debug, LogLevel.INFO, 'Saved state found, applying...', savedState);
 
             // Apply saved state with type validation
             this.setState((draft) => {
@@ -271,7 +276,12 @@ export class StateManager<T extends Identifiable & Record<string, unknown>> {
             });
         } catch (error) {
             // Log error and clear invalid state
-            log(this.#parent.debug, LogLevel.ERROR, 'Could not load state from localStorage.', error); 
+            log(
+                this.#parent.debug,
+                LogLevel.ERROR,
+                'Could not load state from localStorage.',
+                error
+            );
             localStorage.removeItem(this.#parent.storageKey);
         }
     }
@@ -305,7 +315,7 @@ export class StateManager<T extends Identifiable & Record<string, unknown>> {
             }
         });
 
-        log(this.#parent.debug, LogLevel.LOG, 'Applying stored column order:', newColumnsOrder); 
+        log(this.#parent.debug, LogLevel.LOG, 'Applying stored column order:', newColumnsOrder);
         state.columns = newColumnsOrder;
         state.columnTitles = newTitles;
         state.headerCellClasses = newClasses;

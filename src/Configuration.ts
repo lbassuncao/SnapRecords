@@ -4,10 +4,10 @@ import {
     Identifiable,
     LifecycleHooks,
     SnapRecordsOptions,
-    SnapRecordsConfigError
+    SnapRecordsConfigError,
 } from './SnapTypes.js';
 import { log } from './utils.js';
-import { defaultOptions } from './SnapOptions.js'; 
+import { defaultOptions } from './SnapOptions.js';
 
 /*========================================================================================================
 
@@ -32,10 +32,10 @@ export class Configuration<T extends Identifiable & Record<string, unknown>> {
 
     // Constructor initializes options by merging user-provided options with defaults
     constructor(
-        userOptions: Partial<SnapRecordsOptions<T>>, 
-        debug: boolean, 
-        logger?: (level: LogLevel, message: string, ...args: unknown[]) => void)
-    {
+        userOptions: Partial<SnapRecordsOptions<T>>,
+        debug: boolean,
+        logger?: (level: LogLevel, message: string, ...args: unknown[]) => void
+    ) {
         // Merge user options with defaults
         this.options = { ...defaultOptions, ...userOptions } as SnapRecordsOptions<T>;
         // Set logger, defaulting to the utility log function with debug flag
@@ -82,13 +82,16 @@ export class Configuration<T extends Identifiable & Record<string, unknown>> {
         }
     }
 
-     // Validates column formatters
+    // Validates column formatters
     private validateFormatters(): void {
         if (this.options.columnFormatters) {
             // Check each formatter to ensure it's a function
             for (const key in this.options.columnFormatters) {
                 if (typeof this.options.columnFormatters[key] !== 'function') {
-                    this.logger(LogLevel.WARN, `columnFormatters for column '${key}' is not a function.`);
+                    this.logger(
+                        LogLevel.WARN,
+                        `columnFormatters for column '${key}' is not a function.`
+                    );
                 }
             }
         }
@@ -109,7 +112,10 @@ export class Configuration<T extends Identifiable & Record<string, unknown>> {
             this.options.columnTitles &&
             this.options.columns.length !== this.options.columnTitles.length
         ) {
-            this.logger(LogLevel.WARN, 'The number of columns does not match the number of column titles.');
+            this.logger(
+                LogLevel.WARN,
+                'The number of columns does not match the number of column titles.'
+            );
         }
     }
 
@@ -118,10 +124,12 @@ export class Configuration<T extends Identifiable & Record<string, unknown>> {
         const rpp = this.options.rowsPerPage ?? RowsPerPage.DEFAULT;
         // Check if rowsPerPage is within the recommended range
         if (typeof rpp !== 'number' || rpp < 1 || rpp > 1000) {
-            this.logger(LogLevel.WARN, `rowsPerPage value '${rpp}' is outside the recommended range (1-1000).`);
+            this.logger(
+                LogLevel.WARN,
+                `rowsPerPage value '${rpp}' is outside the recommended range (1-1000).`
+            );
         }
     }
-
 }
 
 /*========================================================================================================
