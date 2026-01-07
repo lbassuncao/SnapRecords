@@ -1,4 +1,5 @@
 {
+    "license": "MIT",
     "keywords": [
         "datatable",
         "data-grid",
@@ -33,6 +34,14 @@
             "require": "./dist/snap-records.umd.js"
         }
     },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/lbassuncao/SnapRecords.git"
+    },
+    "bugs": {
+        "url": "https://github.com/lbassuncao/SnapRecords/issues"
+    },
+    "homepage": "https://github.com/lbassuncao/SnapRecords#readme",
     "devDependencies": {
         "@testing-library/dom": "^10.4.0",
         "@types/jest": "^30.0.0",
@@ -69,14 +78,5 @@
         "format": "prettier --write \"src/**/*.{js,ts,json,scss,md}\"",
         "build:css": "sass src/scss/SnapRecords.scss dist/snap-records.css --style=compressed --source-map"
     },
-    "description": "A powerful and flexible TypeScript data grid component for modern web applications. Features server-side data handling, multiple rendering modes, extensive customization, and full accessibility support.",
-    "license": "MIT",
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/lbassuncao/SnapRecords.git"
-    },
-    "bugs": {
-        "url": "https://github.com/lbassuncao/SnapRecords/issues"
-    },
-    "homepage": "https://github.com/lbassuncao/SnapRecords#readme"
+    "description": "A powerful and flexible TypeScript data grid component for modern web applications. Features server-side data handling, multiple rendering modes, extensive customization, and full accessibility support."
 }
