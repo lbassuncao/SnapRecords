@@ -72,5 +72,6 @@
         "format": "prettier --write \"src/**/*.{js,ts,json,scss,md}\"",
         "build:css": "sass src/scss/SnapRecords.scss dist/snap-records.css --style=compressed --source-map"
     },
-    "description": "A powerful and flexible TypeScript data grid component for modern web applications. Features server-side data handling, multiple rendering modes, extensive customization, and full accessibility support."
+    "description": "A powerful and flexible TypeScript data grid component for modern web applications. Features server-side data handling, multiple rendering modes, extensive customization, and full accessibility support.",
+    "license": "MIT"
 }
