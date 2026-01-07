@@ -5,20 +5,20 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/snap-records"><img src="https://img.shields.io/npm/v/snap-records.svg" alt="NPM Version"></a>
-  <a href="./docs/LICENSE.txt"><img src="https://img.shields.io/npm/l/snap-records.svg" alt="License"></a>
+  <a href="https://www.npmjs.com/package/snap-records"><img src="https://img.shields.io/npm/v/snap-records.svg?style=flat-square&color=007acc" alt="NPM Version"></a>
+  <a href="https://github.com/lbassuncao/SnapRecords/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/snap-records.svg?style=flat-square&color=007acc" alt="License"></a>
   <a href="https://github.com/lbassuncao/SnapRecords/actions/workflows/ci.yml"><img src="https://github.com/lbassuncao/SnapRecords/actions/workflows/ci.yml/badge.svg" alt="Build Status"></a>
 </p>
 
 <br>
 
 <p align="center" style="font-size: 1.15rem">
-  <strong><a href="./docs/CONFIG.md">Configuration</a></strong> |
-  <strong><a href="./docs/BUILD.md">Build Guide</a></strong> |
-  <strong><a href="./docs/KEYBOARD.md">Keyboard Navigation</a></strong> |
-  <strong><a href="./CONTRIBUTING.md">Contributing</a></strong> |
-  <strong><a href="./docs/LICENSE.txt">License</a></strong> |
-  <strong><a href="./docs/COC.md">Code of Conduct</a></strong>
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/CONFIG.md">Configuration</a></strong> |
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/BUILD.md">Build Guide</a></strong> |
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/KEYBOARD.md">Keyboard Navigation</a></strong> |
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/CONTRIBUTING.md">Contributing</a></strong> |
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/LICENSE">License</a></strong> |
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/COC.md">Code of Conduct</a></strong>
 </p>
 
 <br>
@@ -47,25 +47,33 @@ It supports server-side pagination, sorting, filtering, caching, multiple render
 
 To quickly set up SnapRecords:
 
-1. Install dependencies:
+1. **Install via NPM**:
     ```bash
-    npm install dexie immer lru-cache
+    npm install snap-records
     ```
-2. Include the compiled CSS:
+
+2. **Include Styles**:
+    If using a bundler (Vite, Webpack, etc.):
+    ```typescript
+    import 'snap-records/dist/snap-records.css';
+    ```
+    Or via HTML:
     ```html
-    <link rel="stylesheet" href="/path/to/snap-records.css" />
+    <link rel="stylesheet" href="/node_modules/snap-records/dist/snap-records.css" />
     ```
-3. Create a container:
+
+3. **Create a container**:
     ```html
     <div id="table-container"></div>
     ```
-4. Initialize SnapRecords:
+
+4. **Initialize SnapRecords**:
 
     ```typescript
-    import { SnapRecords, RowsPerPage } from './SnapRecords';
+    import { SnapRecords, RowsPerPage } from 'snap-records';
 
     new SnapRecords('table-container', {
-        url: '[https://api.example.com/data](https://api.example.com/data)',
+        url: 'https://api.example.com/data',
         columns: ['id', 'name'],
         rowsPerPage: RowsPerPage.DEFAULT,
         // No theme specified, so it uses 'default' and inherits host page styles
@@ -73,6 +81,12 @@ To quickly set up SnapRecords:
     ```
 
 ## Installation
+
+### NPM (Recommended)
+
+```bash
+npm install snap-records
+```
 
 ### Prerequisites
 
@@ -141,7 +155,7 @@ npm install dexie immer lru-cache
 A minimal setup with a table displaying user data:
 
 ```typescript
-import { SnapRecords, RowsPerPage } from './SnapRecords';
+import { SnapRecords, RowsPerPage } from 'snap-records';
 
 const snapRecords = new SnapRecords('table-container', {
     url: '/api/users',
@@ -156,7 +170,7 @@ const snapRecords = new SnapRecords('table-container', {
 Enabling row selection, custom formatting, and disabling sorting on a column:
 
 ```typescript
-import { SnapRecords, RenderType, RowsPerPage } from './SnapRecords';
+import { SnapRecords, RenderType, RowsPerPage } from 'snap-records';
 
 const snapRecords = new SnapRecords('table-container', {
     url: '/api/users',
@@ -179,7 +193,7 @@ console.log(api.getSelectedRows());
 Using all available options:
 
 ```typescript
-import { SnapRecords, RenderType, RowsPerPage } from './SnapRecords';
+import { SnapRecords, RenderType, RowsPerPage } from 'snap-records';
 
 const snapRecords = new SnapRecords('table-container', {
     url: 'https://api.example.com/data',
@@ -234,7 +248,7 @@ api.setRenderMode(RenderType.MOBILE_CARDS);
 
 ## Configuration Options
 
-The `SnapRecordsOptions<T>` interface defines all configuration options. Key options include (see `config.md` for full details):
+The `SnapRecordsOptions<T>` interface defines all configuration options. Key options include (see [config.md](https://github.com/lbassuncao/SnapRecords/blob/main/docs/CONFIG.md) for full details):
 
 - `url` (string, required): API URL for data fetching.
 - `columns` (string[], required): Column keys to display.
@@ -311,7 +325,7 @@ Override styles in your CSS as needed.
 SnapRecords prioritizes accessibility:
 
 - **ARIA Attributes**: Supports `aria-sort`, `aria-selected`, `aria-label` for table, list, and card modes.
-- **Keyboard Navigation**: ArrowUp/Down for row navigation, Enter/Space for selection, PageUp/Down for pagination (see `keyboard.md`).
+- **Keyboard Navigation**: ArrowUp/Down for row navigation, Enter/Space for selection, PageUp/Down for pagination (see [keyboard.md](https://github.com/lbassuncao/SnapRecords/blob/main/docs/KEYBOARD.md)).
 - **Screen Reader Support**: Announces updates (e.g., row selection, mode changes) via ARIA live regions.
 
 ## State Management
@@ -464,7 +478,7 @@ Customize rendering or event handling by providing custom `renderer`, `eventMana
 
 ## License
 
-MIT License. See [`LICENSE`](./docs/LICENSE.txt) for details.
+MIT License. See [LICENSE](https://github.com/lbassuncao/SnapRecords/blob/main/LICENSE) for details.
 
 ## Support
 
