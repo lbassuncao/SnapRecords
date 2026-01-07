@@ -22,7 +22,7 @@
         "jquery-dynatable"
     ],
     "type": "module",
-    "version": "1.1.5",
+    "version": "1.1.6",
     "name": "snap-records",
     "dependencies": {
         "dexie": "^4.0.11",
