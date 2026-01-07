@@ -3,9 +3,9 @@
 </template>
 
 <script setup lang="ts" generic="T extends Identifiable">
-import { SnapRecords } from './SnapRecords'; // Adjust path as needed
+import { SnapRecords } from 'snap-records';
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
-import { SnapRecordsOptions, Identifiable, ISnapApi } from './SnapTypes'; // Adjust path as needed
+import { SnapRecordsOptions, Identifiable, ISnapApi } from 'snap-records';
 
 // Define component props
 const props = defineProps<{

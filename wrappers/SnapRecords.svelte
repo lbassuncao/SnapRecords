@@ -1,8 +1,8 @@
 <script lang="ts" generic="T extends Identifiable">
 
     import { onMount } from 'svelte';
-    import { SnapRecords } from './SnapRecords'; // Adjust path as needed
-    import type { SnapRecordsOptions, Identifiable, ISnapApi } from './SnapTypes'; // Adjust path as needed
+    import { SnapRecords } from 'snap-records';
+    import type { SnapRecordsOptions, Identifiable, ISnapApi } from 'snap-records';
 
     // Use $props() to declare component properties in Svelte 5.
     const { options, onReady = () => {} } = $props<{
