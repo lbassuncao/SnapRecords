@@ -25,7 +25,7 @@
 
 **SnapRecords** is a powerful, flexible TypeScript-based data grid component for displaying, managing, and interacting with tabular data in web applications.
 
-Inspired by [jQuery Dynatable](https://github.com/alfajango/jquery-dynatable), it modernizes the concept with type safety, enhanced features, and performance optimizations.
+Inspired by <a href="https://github.com/alfajango/jquery-dynatable" target="_blank" rel="noopener noreferrer">jQuery Dynatable</a>, it modernizes the concept with type safety, enhanced features, and performance optimizations.
 
 It supports server-side pagination, sorting, filtering, caching, multiple rendering modes, and accessibility, making it ideal for both simple and complex data-driven interfaces.
 
@@ -65,7 +65,7 @@ To quickly set up SnapRecords:
     import { SnapRecords, RowsPerPage } from './SnapRecords';
 
     new SnapRecords('table-container', {
-        url: '[https://api.example.com/data](https://api.example.com/data)',
+        url: 'https://api.example.com/data',
         columns: ['id', 'name'],
         rowsPerPage: RowsPerPage.DEFAULT,
         // No theme specified, so it uses 'default' and inherits host page styles
@@ -234,7 +234,7 @@ api.setRenderMode(RenderType.MOBILE_CARDS);
 
 ## Configuration Options
 
-The `SnapRecordsOptions<T>` interface defines all configuration options. Key options include (see `config.md` for full details):
+The `SnapRecordsOptions<T>` interface defines all configuration options. Key options include (see <a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/CONFIG.md" target="_blank" rel="noopener noreferrer">config.md</a> for full details):
 
 - `url` (string, required): API URL for data fetching.
 - `columns` (string[], required): Column keys to display.
@@ -311,7 +311,7 @@ Override styles in your CSS as needed.
 SnapRecords prioritizes accessibility:
 
 - **ARIA Attributes**: Supports `aria-sort`, `aria-selected`, `aria-label` for table, list, and card modes.
-- **Keyboard Navigation**: ArrowUp/Down for row navigation, Enter/Space for selection, PageUp/Down for pagination (see `keyboard.md`).
+- **Keyboard Navigation**: ArrowUp/Down for row navigation, Enter/Space for selection, PageUp/Down for pagination (see <a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/KEYBOARD.md" target="_blank" rel="noopener noreferrer">keyboard.md</a>).
 - **Screen Reader Support**: Announces updates (e.g., row selection, mode changes) via ARIA live regions.
 
 ## State Management
@@ -464,7 +464,7 @@ Customize rendering or event handling by providing custom `renderer`, `eventMana
 
 ## License
 
-MIT License. See [`LICENSE`](./docs/LICENSE.txt) for details.
+MIT License. See <a href="https://github.com/lbassuncao/SnapRecords/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">LICENSE</a> for details.
 
 ## Support
 
