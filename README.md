@@ -5,27 +5,27 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/snap-records" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/npm/v/snap-records.svg?style=flat-square&color=007acc" alt="NPM Version"></a>
-  <a href="https://github.com/lbassuncao/SnapRecords/blob/main/LICENSE" target="_blank" rel="noopener noreferrer"><img src="https://img.shields.io/npm/l/snap-records.svg?style=flat-square&color=007acc" alt="License"></a>
-  <a href="https://github.com/lbassuncao/SnapRecords/actions/workflows/ci.yml" target="_blank" rel="noopener noreferrer"><img src="https://github.com/lbassuncao/SnapRecords/actions/workflows/ci.yml/badge.svg" alt="Build Status"></a>
+  <a href="https://www.npmjs.com/package/snap-records"><img src="https://img.shields.io/npm/v/snap-records.svg?style=flat-square&color=007acc" alt="NPM Version"></a>
+  <a href="https://github.com/lbassuncao/SnapRecords/blob/main/LICENSE"><img src="https://img.shields.io/npm/l/snap-records.svg?style=flat-square&color=007acc" alt="License"></a>
+  <a href="https://github.com/lbassuncao/SnapRecords/actions/workflows/ci.yml"><img src="https://github.com/lbassuncao/SnapRecords/actions/workflows/ci.yml/badge.svg" alt="Build Status"></a>
 </p>
 
 <br>
 
 <p align="center" style="font-size: 1.15rem">
-  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/CONFIG.md" target="_blank" rel="noopener noreferrer">Configuration</a></strong> |
-  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/BUILD.md" target="_blank" rel="noopener noreferrer">Build Guide</a></strong> |
-  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/KEYBOARD.md" target="_blank" rel="noopener noreferrer">Keyboard Navigation</a></strong> |
-  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener noreferrer">Contributing</a></strong> |
-  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">License</a></strong> |
-  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/COC.md" target="_blank" rel="noopener noreferrer">Code of Conduct</a></strong>
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/CONFIG.md">Configuration</a></strong> |
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/BUILD.md">Build Guide</a></strong> |
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/KEYBOARD.md">Keyboard Navigation</a></strong> |
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/CONTRIBUTING.md">Contributing</a></strong> |
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/LICENSE">License</a></strong> |
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/COC.md">Code of Conduct</a></strong>
 </p>
 
 <br>
 
 **SnapRecords** is a powerful, flexible TypeScript-based data grid component for displaying, managing, and interacting with tabular data in web applications.
 
-Inspired by <a href="https://github.com/alfajango/jquery-dynatable" target="_blank" rel="noopener noreferrer">jQuery Dynatable</a>, it modernizes the concept with type safety, enhanced features, and performance optimizations.
+Inspired by [jQuery Dynatable](https://github.com/alfajango/jquery-dynatable), it modernizes the concept with type safety, enhanced features, and performance optimizations.
 
 It supports server-side pagination, sorting, filtering, caching, multiple rendering modes, and accessibility, making it ideal for both simple and complex data-driven interfaces.
 
@@ -234,7 +234,7 @@ api.setRenderMode(RenderType.MOBILE_CARDS);
 
 ## Configuration Options
 
-The `SnapRecordsOptions<T>` interface defines all configuration options. Key options include (see <a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/CONFIG.md" target="_blank" rel="noopener noreferrer">config.md</a> for full details):
+The `SnapRecordsOptions<T>` interface defines all configuration options. Key options include (see [config.md](https://github.com/lbassuncao/SnapRecords/blob/main/docs/CONFIG.md) for full details):
 
 - `url` (string, required): API URL for data fetching.
 - `columns` (string[], required): Column keys to display.
@@ -311,7 +311,7 @@ Override styles in your CSS as needed.
 SnapRecords prioritizes accessibility:
 
 - **ARIA Attributes**: Supports `aria-sort`, `aria-selected`, `aria-label` for table, list, and card modes.
-- **Keyboard Navigation**: ArrowUp/Down for row navigation, Enter/Space for selection, PageUp/Down for pagination (see <a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/KEYBOARD.md" target="_blank" rel="noopener noreferrer">keyboard.md</a>).
+- **Keyboard Navigation**: ArrowUp/Down for row navigation, Enter/Space for selection, PageUp/Down for pagination (see [keyboard.md](https://github.com/lbassuncao/SnapRecords/blob/main/docs/KEYBOARD.md)).
 - **Screen Reader Support**: Announces updates (e.g., row selection, mode changes) via ARIA live regions.
 
 ## State Management
@@ -464,7 +464,7 @@ Customize rendering or event handling by providing custom `renderer`, `eventMana
 
 ## License
 
-MIT License. See <a href="https://github.com/lbassuncao/SnapRecords/blob/main/LICENSE" target="_blank" rel="noopener noreferrer">LICENSE</a> for details.
+MIT License. See [LICENSE](https://github.com/lbassuncao/SnapRecords/blob/main/LICENSE) for details.
 
 ## Support
 
