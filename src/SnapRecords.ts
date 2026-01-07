@@ -205,7 +205,9 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
         this.db = new SnapRecordsDB<T>(`SnapRecordsDB_${this.container.id}`);
         // This ensures each SnapRecords instance can have its own path for translations.
         this.translationManager = new TranslationManager(
-            configOptions.langPath, this.debug, this.log.bind(this)
+            configOptions.langPath,
+            this.debug,
+            this.log.bind(this)
         );
         this.stateManager = options.stateManager?.(this) ?? new StateManager(this);
         this.urlManager = options.urlManager?.(this) ?? new UrlManager(this);

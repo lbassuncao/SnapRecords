@@ -16,7 +16,7 @@ import { Translation, LogLevel } from './SnapTypes.js';
 // Exporting the class directly to allow per-instance configuration,
 // instead of using a shared singleton instance.
 export class TranslationManager {
-    // Debug flag from 
+    // Debug flag from
     // parent SnapRecords instance
     #debug: boolean;
     // Maximum number of retry
@@ -36,32 +36,33 @@ export class TranslationManager {
     // Clears the translation cache
     public clearCache(): void {
         this.#cache.clear();
-        this.#logger(LogLevel.INFO, 'Translation cache cleared.'); 
+        this.#logger(LogLevel.INFO, 'Translation cache cleared.');
     }
 
     // The constructor now receives
     // the language path, which will be provided
     // by the SnapRecords instance.
     constructor(
-        langPath: string = '/lang', 
-        debug: boolean = false, 
+        langPath: string = '/lang',
+        debug: boolean = false,
         logger?: (level: LogLevel, message: string, ...args: unknown[]) => void
     ) {
         this.#langPath = langPath;
         this.#debug = debug;
         // Use the provided logger or default to utils.log
-        this.#logger = logger || ((level, message, ...args) => log(this.#debug, level, message, ...args));
+        this.#logger =
+            logger || ((level, message, ...args) => log(this.#debug, level, message, ...args));
     }
 
     // Fetches or retrieves cached translations for a given language
     public async get(lang: string): Promise<Translation> {
         // Return cached translation if available
         if (this.#cache.has(lang)) {
-            this.#logger(LogLevel.INFO, `Translation for ${lang} found in cache.`); 
+            this.#logger(LogLevel.INFO, `Translation for ${lang} found in cache.`);
             return this.#cache.get(lang)!;
         }
 
-        this.#logger(LogLevel.INFO, `Attempting to load translation for: ${lang}`); 
+        this.#logger(LogLevel.INFO, `Attempting to load translation for: ${lang}`);
 
         // Attempt to fetch translation with retries
         for (let attempt = 1; attempt <= this.#maxRetries + 1; attempt++) {
@@ -76,21 +77,31 @@ export class TranslationManager {
                 // Parse and cache the translation
                 const translation: Translation = await response.json();
                 this.#cache.set(lang, translation);
-                this.#logger(LogLevel.INFO, `Translation for ${lang} loaded and cached.`); 
+                this.#logger(LogLevel.INFO, `Translation for ${lang} loaded and cached.`);
                 return translation;
             } catch (error) {
-                this.#logger(LogLevel.ERROR, `Failed to load translation for ${lang} (attempt ${attempt}):`, error); 
+                this.#logger(
+                    LogLevel.ERROR,
+                    `Failed to load translation for ${lang} (attempt ${attempt}):`,
+                    error
+                );
                 // Handle fetch failure
                 if (attempt > this.#maxRetries) {
                     // Fall back to default language if all retries fail
                     if (lang === this.#fallbackLang) {
                         // Prevent infinite recursion if fallback fails
-                        this.#logger(LogLevel.ERROR, `CRITICAL: Fallback translation '${this.#fallbackLang}' failed to load.`); 
+                        this.#logger(
+                            LogLevel.ERROR,
+                            `CRITICAL: Fallback translation '${this.#fallbackLang}' failed to load.`
+                        );
                         throw new Error(
                             `CRITICAL: Fallback translation '${this.#fallbackLang}' failed to load.`
                         );
                     }
-                    this.#logger(LogLevel.WARN, `All retries failed for ${lang}. Falling back to ${this.#fallbackLang}.`); 
+                    this.#logger(
+                        LogLevel.WARN,
+                        `All retries failed for ${lang}. Falling back to ${this.#fallbackLang}.`
+                    );
                     // Attempt to fetch fallback language
                     return this.get(this.#fallbackLang);
                 }

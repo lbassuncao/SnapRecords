@@ -50,7 +50,7 @@ export class CacheManager<T extends Identifiable & Record<string, unknown>> {
             // Clear cache if filters have changed
             this.#parent.db.cache.clear();
             this.#parent.lastFilterHash = filterHash;
-            log(this.#parent.debug, LogLevel.LOG, 'Cache invalidated due to filter change'); 
+            log(this.#parent.debug, LogLevel.LOG, 'Cache invalidated due to filter change');
         }
     }
 
@@ -60,17 +60,19 @@ export class CacheManager<T extends Identifiable & Record<string, unknown>> {
         if (!this.#parent.preloadNextPageEnabled) return;
 
         // Check network conditions to avoid preloading on slow connections
-        const conn = (navigator as { 
-            connection?: { saveData?: boolean; effectiveType?: string } 
-        })
-            .connection;
+        const conn = (
+            navigator as {
+                connection?: { saveData?: boolean; effectiveType?: string };
+            }
+        ).connection;
         if (
             conn &&
             (conn.saveData || conn.effectiveType === 'slow-2g' || conn.effectiveType === '2g')
         ) {
             log(
                 this.#parent.debug,
-                LogLevel.INFO, 'Preloading skipped due to slow connection or data saver mode.' 
+                LogLevel.INFO,
+                'Preloading skipped due to slow connection or data saver mode.'
             );
             return;
         }
@@ -94,7 +96,7 @@ export class CacheManager<T extends Identifiable & Record<string, unknown>> {
                 log(
                     this.#parent.debug,
                     LogLevel.INFO,
-                    'Preload not needed, next page is already cached and valid.' 
+                    'Preload not needed, next page is already cached and valid.'
                 );
                 return;
             }
@@ -102,7 +104,7 @@ export class CacheManager<T extends Identifiable & Record<string, unknown>> {
 
         try {
             // Fetch data for the next page
-            log(this.#parent.debug, LogLevel.INFO, 'Preloading data for next page:', url); 
+            log(this.#parent.debug, LogLevel.INFO, 'Preloading data for next page:', url);
             const response = await fetch(url);
             if (response.ok) {
                 const data: { data: T[]; totalRecords: number } = await response.json();
@@ -118,10 +120,9 @@ export class CacheManager<T extends Identifiable & Record<string, unknown>> {
             }
         } catch (error: unknown) {
             // Log preload failure
-            log(this.#parent.debug, LogLevel.LOG, 'Preload failed:', { error, url }); 
+            log(this.#parent.debug, LogLevel.LOG, 'Preload failed:', { error, url });
         }
     }
-
 
     // Caches data for a given URL
     public async cacheData(url: string, data: CacheData<T>): Promise<void> {
@@ -130,10 +131,10 @@ export class CacheManager<T extends Identifiable & Record<string, unknown>> {
         try {
             // Store data in IndexedDB
             await this.#parent.db.cache.put(data);
-            log(this.#parent.debug, LogLevel.INFO, 'Data cached successfully for URL:', url); 
+            log(this.#parent.debug, LogLevel.INFO, 'Data cached successfully for URL:', url);
         } catch (error: unknown) {
             // Log error if caching fails
-            log(this.#parent.debug, LogLevel.ERROR, 'Error caching data:', { error, url }); 
+            log(this.#parent.debug, LogLevel.ERROR, 'Error caching data:', { error, url });
         }
     }
 
@@ -156,7 +157,7 @@ export class CacheManager<T extends Identifiable & Record<string, unknown>> {
             return undefined;
         } catch (error: unknown) {
             // Log error and return undefined
-            log(this.#parent.debug, LogLevel.ERROR, 'Error retrieving cache:', { error, url }); 
+            log(this.#parent.debug, LogLevel.ERROR, 'Error retrieving cache:', { error, url });
             return undefined;
         }
     }

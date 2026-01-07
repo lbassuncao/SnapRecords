@@ -29,7 +29,8 @@ import defaultTranslations from './lang/en_US.json';
 ==========================================================================================================*/
 
 export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
-    implements ISnapRenderer<T> {
+    implements ISnapRenderer<T>
+{
     // Container for mobile cards display
     public cardsContainer: HTMLElement | null = null;
     // Main table element for table rendering
@@ -79,7 +80,7 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
 
     // Creates the necessary DOM containers for rendering
     public createContainers(): void {
-        log(this.parent.debug, LogLevel.INFO, 'Creating DOM containers for rendering.'); 
+        log(this.parent.debug, LogLevel.INFO, 'Creating DOM containers for rendering.');
         // Clear the container's content
         this.parent.container.innerHTML = '';
         // Add table container class
@@ -103,7 +104,7 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
     public showLoading(): void {
         if (this.parent.isLoading) return;
         this.parent.isLoading = true;
-        log(this.parent.debug, LogLevel.INFO, 'Showing loading indicator.'); 
+        log(this.parent.debug, LogLevel.INFO, 'Showing loading indicator.');
 
         // Get translations, falling back to default
         const translations = this.parent.state.translations ?? defaultTranslations;
@@ -139,7 +140,7 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
 
     // Applies the current theme class to the container
     public applyThemeClass(): void {
-        log(this.parent.debug, LogLevel.INFO, `Applying theme: ${this.parent.state.theme}`); 
+        log(this.parent.debug, LogLevel.INFO, `Applying theme: ${this.parent.state.theme}`);
         // ### CORRECTION HERE ###
         // Remove all possible existing theme classes before adding the new one.
         this.parent.container.classList.remove('theme-light', 'theme-dark', 'theme-default');
@@ -180,7 +181,7 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
         }
     }
 
-     // Applies column widths to table headers
+    // Applies column widths to table headers
     public applyColumnWidths(): void {
         // Use requestAnimationFrame for smooth rendering
         requestAnimationFrame(() => {
@@ -230,7 +231,7 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
     // Main rendering method based on the current state
     public render(): void {
         if (!this.parent.state.translations) return;
-        log(this.parent.debug, LogLevel.INFO, 'Starting render process...'); 
+        log(this.parent.debug, LogLevel.INFO, 'Starting render process...');
         // Call pre-render hook if defined
         if (this.parent.lifecycleHooks.preRender) this.parent.lifecycleHooks.preRender();
 
@@ -314,7 +315,7 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
         );
     }
 
-     // Creates a pagination button
+    // Creates a pagination button
     #createPaginationButton(
         content: string,
         disabled: boolean,
@@ -462,7 +463,6 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
         this.contentContainer.appendChild(this.cardsContainer);
         this.#renderNonTableFooter();
     }
-
 
     // Creates the list structure for list rendering mode
     #renderListStructure(): void {

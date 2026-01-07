@@ -32,7 +32,8 @@ import defaultTranslations from './lang/en_US.json';
 ==========================================================================================================*/
 
 export class EventManager<T extends Identifiable & Record<string, unknown>>
-    implements ISnapEventManager {
+    implements ISnapEventManager
+{
     // Reference to the parent SnapRecords instance
     #parent: SnapRecords<T>;
     // Renderer instance for updating the UI
@@ -68,10 +69,10 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
     // Removes all event listeners and cleans up
     public destroy(): void {
         log(
-            this.#parent.debug, 
-            LogLevel.INFO, 
+            this.#parent.debug,
+            LogLevel.INFO,
             'Destroying EventManager and removing all listeners.'
-        ); 
+        );
         // Remove click handler
         this.#parent.container.removeEventListener('click', this.#handleDelegatedClick);
         // Remove keyboard handler
@@ -98,7 +99,7 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
 
     // Handles sort requests when a column header is clicked
     #handleSortClick = (col: string): void => {
-        log(this.#parent.debug, LogLevel.INFO, `Sort requested for column: ${col}`); 
+        log(this.#parent.debug, LogLevel.INFO, `Sort requested for column: ${col}`);
         this.#parent.stateManager.setState((draft) => {
             const sortConditions = draft.sortConditions as SortCondition[];
             const sortIndex = sortConditions.findIndex((item: SortCondition) => item[0] === col);
@@ -122,7 +123,7 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
         log(
             this.#parent.debug,
             LogLevel.INFO,
-            `Toggling row selection for index ${index}. New state: ${!isSelected}` 
+            `Toggling row selection for index ${index}. New state: ${!isSelected}`
         );
         // Toggle selection state
         if (isSelected) {
@@ -202,7 +203,7 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
         // Store initial position and width
         this.#startX = event.clientX;
         this.#startWidth = header.offsetWidth;
-        log(this.#parent.debug, LogLevel.INFO, `Starting column resize for: ${columnId}`); 
+        log(this.#parent.debug, LogLevel.INFO, `Starting column resize for: ${columnId}`);
         // Add document-level handlers for resizing
         document.addEventListener('mousemove', this.#handleResize);
         document.addEventListener('mouseup', this.#stopResize);
@@ -226,7 +227,11 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
         };
         const pageAction = pageActions[event.key];
         if (pageAction) {
-            log(this.#parent.debug, LogLevel.INFO, `Keyboard navigation action detected: ${event.key}`); 
+            log(
+                this.#parent.debug,
+                LogLevel.INFO,
+                `Keyboard navigation action detected: ${event.key}`
+            );
             event.preventDefault();
             pageAction();
             return;
@@ -252,7 +257,11 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
         };
         const selectionAction = selectionActions[event.key];
         if (selectionAction) {
-            log(this.#parent.debug, LogLevel.INFO, `Keyboard selection action detected: ${event.key}`); 
+            log(
+                this.#parent.debug,
+                LogLevel.INFO,
+                `Keyboard selection action detected: ${event.key}`
+            );
             event.preventDefault();
             selectionAction();
         }
@@ -263,7 +272,11 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
         if (this.#resizingColumnId === null) return;
         // Calculate new width based on mouse movement
         const width = this.#startWidth + (event.clientX - this.#startX);
-        log(this.#parent.debug, LogLevel.LOG, `Column resizing: ${this.#resizingColumnId} to ${width}px.`); 
+        log(
+            this.#parent.debug,
+            LogLevel.LOG,
+            `Column resizing: ${this.#resizingColumnId} to ${width}px.`
+        );
         this.#parent.stateManager.setState((draft) => {
             (draft.columnWidths as Map<string, number>).set(this.#resizingColumnId!, width);
         });
@@ -274,7 +287,11 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
     // Stops column resizing
     #stopResize = (): void => {
         if (this.#resizingColumnId === null) return;
-        log(this.#parent.debug, LogLevel.INFO, `Finished column resize for: ${this.#resizingColumnId}`); 
+        log(
+            this.#parent.debug,
+            LogLevel.INFO,
+            `Finished column resize for: ${this.#resizingColumnId}`
+        );
         this.#resizingColumnId = null;
         // Remove document-level resize handlers
         document.removeEventListener('mousemove', this.#handleResize);
@@ -290,7 +307,7 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
             event.preventDefault();
             return;
         }
-        log(this.#parent.debug, LogLevel.INFO, `Drag started for column: ${target.dataset.colId}`); 
+        log(this.#parent.debug, LogLevel.INFO, `Drag started for column: ${target.dataset.colId}`);
         if (event.dataTransfer) {
             // Set drag data
             event.dataTransfer.setData('text/plain', target.dataset.colId);
@@ -303,7 +320,7 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
     // Handles the end of a column drag
     #handleDragEnd = (event: DragEvent): void => {
         const target = (event.target as HTMLElement).closest('th');
-        log(this.#parent.debug, LogLevel.INFO, `Drag ended for column: ${target?.dataset.colId}`); 
+        log(this.#parent.debug, LogLevel.INFO, `Drag ended for column: ${target?.dataset.colId}`);
         // Remove dragging and drag-over classes
         this.#renderer.tableHeader?.querySelectorAll('th').forEach((th) => {
             th.classList.remove(config.classes.dragging);
@@ -335,7 +352,9 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
             const pageNumText = pageButton.textContent?.trim();
             const pageNum = pageNumText ? parseInt(pageNumText, 10) : NaN;
 
-            log(this.#parent.debug, LogLevel.INFO, 'Pagination button clicked.', { text: pageNumText }); 
+            log(this.#parent.debug, LogLevel.INFO, 'Pagination button clicked.', {
+                text: pageNumText,
+            });
 
             if (pageButton.classList.contains(config.pagination.prevButton.classNames.base)) {
                 this.#parent.gotoPage(this.#parent.state.currentPage - 1);
@@ -368,7 +387,11 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
         const sourceColId = event.dataTransfer?.getData('text/plain');
         const targetColId = target?.dataset.colId;
         if (sourceColId && targetColId && sourceColId !== targetColId) {
-            log(this.#parent.debug, LogLevel.INFO, `Column drop: "${sourceColId}" onto "${targetColId}"`); 
+            log(
+                this.#parent.debug,
+                LogLevel.INFO,
+                `Column drop: "${sourceColId}" onto "${targetColId}"`
+            );
             // Reorder columns
             this.#callbacks.reorderColumns(sourceColId, targetColId);
         }
