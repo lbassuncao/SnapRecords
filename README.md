@@ -13,12 +13,12 @@
 <br>
 
 <p align="center" style="font-size: 1.15rem">
-  <strong><a href="./docs/CONFIG.md">Configuration</a></strong> |
-  <strong><a href="./docs/BUILD.md">Build Guide</a></strong> |
-  <strong><a href="./docs/KEYBOARD.md">Keyboard Navigation</a></strong> |
-  <strong><a href="./CONTRIBUTING.md">Contributing</a></strong> |
-  <strong><a href="./docs/LICENSE.txt">License</a></strong> |
-  <strong><a href="./docs/COC.md">Code of Conduct</a></strong>
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/CONFIG.md">Configuration</a></strong> |
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/BUILD.md">Build Guide</a></strong> |
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/KEYBOARD.md">Keyboard Navigation</a></strong> |
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/CONTRIBUTING.md">Contributing</a></strong> |
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/LICENSE.txt">License</a></strong> |
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/COC.md">Code of Conduct</a></strong>
 </p>
 
 <br>
