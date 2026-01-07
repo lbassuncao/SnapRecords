@@ -10,8 +10,8 @@ import {
     Output,
     EventEmitter
 } from '@angular/core';
-import { SnapRecords } from './SnapRecords'; // Adjust path as needed
-import { SnapRecordsOptions, Identifiable, ISnapApi } from './SnapTypes'; // Adjust path as needed
+import { SnapRecords } from 'snap-records';
+import { SnapRecordsOptions, Identifiable, ISnapApi } from 'snap-records';
 
 @Component({
     selector: 'snap-records-wrapper',

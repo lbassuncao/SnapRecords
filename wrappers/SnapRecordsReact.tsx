@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useId } from 'react';
-import { SnapRecords } from './SnapRecords'; // Adjust path as needed
-import { SnapRecordsOptions, Identifiable, ISnapApi } from './SnapTypes'; // Adjust path as needed
+import { SnapRecords } from 'snap-records';
+import { SnapRecordsOptions, Identifiable, ISnapApi } from 'snap-records';
 
 // Make the wrapper generic to pass down the data type T
 interface SnapRecordsReactProps<T extends Identifiable> {
