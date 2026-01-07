@@ -5,8 +5,8 @@
 </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/snap-records"><img src="https://img.shields.io/npm/v/snap-records.svg" alt="NPM Version"></a>
-  <a href="./docs/LICENSE.txt"><img src="https://img.shields.io/npm/l/snap-records.svg" alt="License"></a>
+  <a href="https://www.npmjs.com/package/snap-records"><img src="https://img.shields.io/npm/v/snap-records.svg?style=flat&color=blue" alt="NPM Version"></a>
+  <a href="./LICENSE.txt"><img src="https://img.shields.io/npm/l/snap-records.svg?style=flat&color=blue" alt="License"></a>
   <a href="https://github.com/lbassuncao/SnapRecords/actions/workflows/ci.yml"><img src="https://github.com/lbassuncao/SnapRecords/actions/workflows/ci.yml/badge.svg" alt="Build Status"></a>
 </p>
 
