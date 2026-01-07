@@ -6,7 +6,7 @@
 
 <p align="center">
   <a href="https://www.npmjs.com/package/snap-records"><img src="https://img.shields.io/npm/v/snap-records.svg?style=flat&color=blue" alt="NPM Version"></a>
-  <a href="./LICENSE.txt"><img src="https://img.shields.io/npm/l/snap-records.svg?style=flat&color=blue" alt="License"></a>
+  <a href="./LICENSE"><img src="https://img.shields.io/npm/l/snap-records.svg?style=flat&color=blue" alt="License"></a>
   <a href="https://github.com/lbassuncao/SnapRecords/actions/workflows/ci.yml"><img src="https://github.com/lbassuncao/SnapRecords/actions/workflows/ci.yml/badge.svg" alt="Build Status"></a>
 </p>
 
@@ -17,7 +17,7 @@
   <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/BUILD.md">Build Guide</a></strong> |
   <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/KEYBOARD.md">Keyboard Navigation</a></strong> |
   <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/CONTRIBUTING.md">Contributing</a></strong> |
-  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/LICENSE.txt">License</a></strong> |
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/LICENSE">License</a></strong> |
   <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/COC.md">Code of Conduct</a></strong>
 </p>
 
