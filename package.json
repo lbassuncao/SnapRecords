@@ -30,9 +30,14 @@
     "module": "./dist/snap-records.es.js",
     "exports": {
         ".": {
+            "types": "./dist/index.d.ts",
             "import": "./dist/snap-records.es.js",
             "require": "./dist/snap-records.umd.js"
-        }
+        },
+        "./dist/*": "./dist/*",
+        "./lang/*": "./dist/lang/*",
+        "./package.json": "./package.json",
+        "./style.css": "./dist/snap-records.css"
     },
     "repository": {
         "type": "git",
@@ -72,7 +77,7 @@
         "preview": "vite preview",
         "lint": "eslint \"src/**/*.{js,ts}\"",
         "lint:fix": "eslint \"src/**/*.{js,ts}\" --fix",
-        "build": "npm run build:js && npm run build:css",
+        "build": "npm run build:js && npm run build:css && mkdir -p dist/lang && cp src/lang/*.json dist/lang/",
         "demo:dev": "vite demo --config vite.config.demo.ts",
         "demo:build": "vite build demo --config vite.config.demo.ts",
         "format": "prettier --write \"src/**/*.{js,ts,json,scss,md}\"",
