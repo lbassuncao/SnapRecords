@@ -11,20 +11,28 @@
 
 ==========================================================================================================*/
 
-// Exports key types for TypeScript users
 export type {
+    ISnapApi,
+    SnapTheme,
     Translation,
     Identifiable,
+    SortCondition,
     LifecycleHooks,
+    SnapRecordsState,
     SnapRecordsOptions,
     ServerRequestParams,
+    PersistedState,
 } from './SnapTypes.js';
 
-// Exports the main SnapRecords class
 export { SnapRecords } from './SnapRecords.js';
 
-// Exports commonly used enums for configuration
-export { RenderType, OrderDirection, RowsPerPage } from './SnapTypes.js';
+export {
+    RenderType,
+    OrderDirection,
+    RowsPerPage,
+    SnapRecordsConfigError,
+    SnapRecordsDataError,
+} from './SnapTypes.js';
 
 /*========================================================================================================
     INDEX FILE FOR VITE ENDS HERE

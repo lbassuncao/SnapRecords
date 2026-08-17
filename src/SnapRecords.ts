@@ -13,6 +13,7 @@ import {
     ISnapEventManager,
     SnapRecordsOptions,
     SnapRecordsDataError,
+    SnapTheme,
     SnapRecordsConfigError,
 } from './SnapTypes.js';
 import './scss/SnapRecords.scss';
@@ -20,7 +21,16 @@ import { LRUCache } from 'lru-cache';
 import { SnapApi } from './SnapApi.js';
 import { config } from './SnapOptions.js';
 import { UrlManager } from './UrlManager.js';
-import { sanitizeHTML, log } from './utils.js';
+import {
+    sanitizeHTML,
+    escapeHTML,
+    log,
+    compactFiltering,
+    normalizeSorting,
+    sanitizeRowsPerPage,
+    resolveTotalRecords,
+    sanitizeLanguage,
+} from './utils.js';
 import { SnapRenderer } from './SnapRenderer.js';
 import { CacheManager } from './CacheManager.js';
 import { StateManager } from './StateManager.js';
@@ -32,6 +42,8 @@ import { TranslationManager } from './Translations.js';
 
 // Type definition for a function that can be debounced
 type DebounceableFunction = (...args: unknown[]) => void;
+
+const activeInstances = new WeakMap<HTMLElement, { destroy: () => void }>();
 
 /*========================================================================================================
 
@@ -59,6 +71,18 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
     #config: Configuration<T>;
     // Bound handler for window unload event to clean up resources
     #boundUnloadHandler!: () => void;
+    #boundPopState = (): void => {
+        if (this.#destroyed || !this.usePushState) return;
+        this.stateManager.loadFromURL({ emptyMeansDefaults: true, absentSnapFieldsReset: true });
+        this.clearFormatCache();
+        this.renderer.render();
+        this.eventManager.setupAllHandlers();
+        this.#debouncedLoadData();
+    };
+    #destroyed = false;
+    #loadDataTimer: number | null = null;
+    #retryTimer: number | null = null;
+    #abortController: AbortController | null = null;
 
     // Current state of the SnapRecords instance, including data, pagination, and filters
     public state: SnapRecordsState<T>;
@@ -90,8 +114,6 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
     public useCache!: boolean;
     // Flag to enable URL state persistence via pushState
     public usePushState!: boolean;
-    // CSS classes for header cells, allowing custom styling
-    public headerCellClasses: string[] = [];
     // Delay for debouncing data load requests (in milliseconds)
     public debounceDelay!: number;
     // Cache expiration time (in milliseconds)
@@ -104,8 +126,7 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
     public persistState!: boolean;
     // Flag to destroy the instance on window unload
     public destroyOnUnload!: boolean;
-    // Flag to enable preloading of the next page
-    public preloadNextPageEnabled!: boolean;
+    public preloadNextPage!: boolean;
     // Flag to enable lazy loading of media (e.g., images)
     public lazyLoadMedia!: boolean;
     // Set of indices of selected rows
@@ -117,12 +138,14 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
         text?: string;
         isHtml?: boolean;
         template?: (page: number | string) => string;
+        classNames: { base: string; disabled?: string; active?: string };
     };
     // Configuration for the next page button
     public nextButtonConfig!: {
         text?: string;
         isHtml?: boolean;
         template?: (page: number | string) => string;
+        classNames: { base: string; disabled?: string; active?: string };
     };
     // Number of retry attempts for failed data fetches
     public retryAttempts!: number;
@@ -133,46 +156,50 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
     // Lifecycle hooks for custom behavior at various stages
     public lifecycleHooks!: LifecycleHooks<T>;
     // Translation manager for handling language files
-    public readonly translationManager: TranslationManager; // Add a property for the TranslationManager instance.
+    public readonly translationManager: TranslationManager;
     // Formatters for custom cell value rendering
     public columnFormatters?: { [columnKey: string]: (value: unknown, row: T) => string };
     // Hash of the last applied filters for cache invalidation
     public lastFilterHash: string = '';
 
     // Getter for the localStorage key used to persist state
+    public get isDestroyed(): boolean {
+        return this.#destroyed;
+    }
+
     public get storageKey(): string {
         return `snap-records-state-${this.container.id}`;
     }
 
-    // Constructor initializes the SnapRecords instance with a container ID and options
-    constructor(containerId: string, options: Partial<SnapRecordsOptions<T>> = {}) {
-        // Measure initialization time for performance logging
+    public get headerCellClasses(): ReadonlyArray<string> {
+        return this.state.headerCellClasses;
+    }
+
+    constructor(container: string | HTMLElement, options: Partial<SnapRecordsOptions<T>> = {}) {
         const startTime = performance.now();
-        // Find the container element by ID
-        const containerEl = document.getElementById(containerId);
-        if (!containerEl)
-            throw new SnapRecordsConfigError(`Container with ID '${containerId}' not found.`);
+        const containerEl =
+            typeof container === 'string' ? document.getElementById(container) : container;
+        if (!containerEl) {
+            const message =
+                typeof container === 'string'
+                    ? `Container with ID '${container}' not found.`
+                    : 'Container element is required.';
+            throw new SnapRecordsConfigError(message);
+        }
+        activeInstances.get(containerEl)?.destroy();
         this.container = containerEl;
-        // Create a content container for the table
+        if (!this.container.id) {
+            this.container.id = `snap-records-${Date.now().toString(36)}-${Math.random()
+                .toString(36)
+                .slice(2, 8)}`;
+        }
         this.contentContainer = document.createElement('div');
 
-        // Initialize debug flag early as it's used by the logger
-        this.debug = options.debug ?? false; // Initialize debug from options
+        this.debug = options.debug ?? false;
 
-        // Initialize configuration with user options and a warning logger
-        // Corrected: Pass this.debug and this.log directly
         this.#config = new Configuration(options, this.debug, this.log.bind(this));
         const configOptions = this.#config.options;
-        // Initialize instance properties from options
         this.#initializeProperties(configOptions);
-
-        window.addEventListener('error', (event) => {
-            this.log(LogLevel.ERROR, 'Unhandled error', event.error);
-        });
-
-        window.addEventListener('unhandledrejection', (event) => {
-            this.log(LogLevel.ERROR, 'Unhandled promise rejection', event.reason);
-        });
 
         // Initialize the LRU cache for formatted values
         this.#formatCache = new LRUCache<string, string>({ max: this.formatCacheSize });
@@ -181,19 +208,24 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
         this.state = {
             currentPage: 1,
             rowsPerPage: configOptions.rowsPerPage ?? RowsPerPage.DEFAULT,
-            filters: {},
-            sortConditions: [],
+            filtering: compactFiltering({ ...(configOptions.filtering ?? {}) }),
+            sorting: normalizeSorting(configOptions.sorting ?? []),
             columns: [...configOptions.columns],
-            columnTitles: [...(configOptions.columnTitles ?? configOptions.columns)],
+            columnTitles: [
+                ...(configOptions.columnTitles?.length
+                    ? configOptions.columnTitles
+                    : configOptions.columns),
+            ],
             columnWidths: new Map(),
             data: [],
             totalRecords: 0,
             format: configOptions.format ?? RenderType.TABLE,
-            language: configOptions.language ?? 'en_US',
+            language: sanitizeLanguage(configOptions.language ?? 'en_US'),
             translations: null,
             theme: configOptions.theme ?? 'default',
             headerCellClasses: [...(configOptions.headerCellClasses ?? [])],
         };
+        this.lastFilterHash = JSON.stringify(compactFiltering(this.state.filtering));
 
         // Define callbacks for event manager
         const eventCallbacks = {
@@ -228,10 +260,15 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
 
         // Perform initial setup
         this.#initialize();
+        activeInstances.set(this.container, this);
         this.log(LogLevel.INFO, `SnapRecords initialized in ${performance.now() - startTime}ms.`);
     }
 
     // Returns the public API instance
+    public getConfigOptions(): SnapRecordsOptions<T> {
+        return this.#config.options;
+    }
+
     public getApi(): ISnapApi<T> {
         return this.#api;
     }
@@ -254,70 +291,88 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
 
     // Refreshes the data by triggering a load
     public refresh(): void {
+        if (this.#destroyed) return;
         this.log(LogLevel.INFO, 'Data refresh requested.');
         this.#debouncedLoadData();
     }
 
     // Clears all row selections
     public clearSelection(): void {
+        if (this.#destroyed) return;
+        if (this.selectedRows.size === 0) {
+            this.renderer.highlightSelectedRows();
+            return;
+        }
         this.log(LogLevel.INFO, 'Clearing all row selections.');
         this.selectedRows.clear();
+        this.currentRowIndex = -1;
         this.renderer.highlightSelectedRows();
+        this.invokeLifecycleHook('selectionChanged', this.getSelectedRows());
+    }
+
+    public invokeLifecycleHook<K extends keyof LifecycleHooks<T>>(
+        name: K,
+        ...args: Parameters<NonNullable<LifecycleHooks<T>[K]>>
+    ): void {
+        const hook = this.lifecycleHooks[name];
+        if (typeof hook !== 'function') return;
+        try {
+            (hook as (...hookArgs: typeof args) => void)(...args);
+        } catch (error) {
+            this.log(LogLevel.ERROR, `lifecycleHooks.${String(name)} threw:`, error);
+        }
     }
 
     // Navigates to the specified page
-    public gotoPage(page: number): void {
-        this.log(LogLevel.INFO, `Navigating to page ${page}.`);
+    public setCurrentPage(page: number): void {
+        if (this.#destroyed) return;
+        let nextPage = Math.max(1, Math.trunc(page) || 1);
+        if (this.state.totalRecords > 0) {
+            const totalPages = Math.max(
+                1,
+                Math.ceil(this.state.totalRecords / this.state.rowsPerPage)
+            );
+            nextPage = Math.min(nextPage, totalPages);
+        }
+        if (nextPage === this.state.currentPage) return;
+        this.log(LogLevel.INFO, `Navigating to page ${nextPage}.`);
         this.stateManager.setState((draft) => {
-            draft.currentPage = page;
+            draft.currentPage = nextPage;
         });
         this.clearFormatCache();
         this.#debouncedLoadData();
     }
 
-    // Sets the theme (light or dark)
-    public setTheme(theme: 'light' | 'dark'): void {
-        if (this.state.theme !== theme) {
-            this.log(LogLevel.INFO, `Setting theme to: ${theme}`);
-            this.stateManager.setState((draft) => {
-                (draft.theme as 'light' | 'dark') = theme;
-            });
-            this.renderer.applyThemeClass();
+    public setTheme(theme: SnapTheme): void {
+        if (this.#destroyed || this.state.theme === theme) return;
+        if (theme !== 'light' && theme !== 'dark' && theme !== 'default') {
+            this.log(
+                LogLevel.WARN,
+                `Invalid theme '${String(theme)}'. Expected light, dark, or default.`
+            );
+            return;
         }
-    }
-
-    // Creates a new mobile card
-    public createMobileCard(row: T, index: number): HTMLDivElement {
-        const card = document.createElement('div');
-        card.classList.add(config.classes.mobileCard);
-        card.setAttribute('data-key', row.id.toString());
-        card.setAttribute('role', 'rowgroup');
-        this.updateMobileCard(card, row, index);
-        return card;
-    }
-
-    // Creates a new list item
-    public createListItem(row: T, index: number): HTMLLIElement {
-        const li = document.createElement('li');
-        li.classList.add(...config.classes.list.itemClass.split(' '));
-        li.setAttribute('data-index', index.toString());
-        li.setAttribute('data-key', row.id.toString());
-        li.setAttribute('role', 'listitem');
-        this.updateListItem(li, row, index);
-        return li;
+        this.log(LogLevel.INFO, `Setting theme to: ${theme}`);
+        this.stateManager.setState((draft) => {
+            draft.theme = theme;
+        });
+        this.renderer.applyThemeClass();
     }
 
     // Sets the rendering mode (table, list, or mobile cards)
-    public setRenderMode(mode: RenderType): void {
-        if (this.state.format !== mode) {
-            this.log(LogLevel.INFO, `Setting render mode to: ${mode}`);
-            this.stateManager.setState((draft) => {
-                (draft.format as RenderType) = mode;
-            });
-            this.clearFormatCache();
-            this.renderer.render();
-            this.eventManager.setupAllHandlers();
+    public setFormat(mode: RenderType): void {
+        if (this.#destroyed || this.state.format === mode) return;
+        if (!Object.values(RenderType).includes(mode)) {
+            this.log(LogLevel.WARN, `Invalid format '${String(mode)}'.`);
+            return;
         }
+        this.log(LogLevel.INFO, `Setting render mode to: ${mode}`);
+        this.stateManager.setState((draft) => {
+            (draft.format as RenderType) = mode;
+        });
+        this.clearFormatCache();
+        this.renderer.render();
+        this.eventManager.setupAllHandlers();
     }
 
     // Clears the in-memory format cache
@@ -326,47 +381,48 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
         this.log(LogLevel.INFO, 'In-memory format cache cleared.');
     }
 
-    // Destroys the SnapRecords instance, cleaning up resources
     public destroy(): void {
+        if (this.#destroyed) return;
+        this.#destroyed = true;
         this.log(LogLevel.LOG, 'Destroying SnapRecords Instance...');
+        if (this.#loadDataTimer) {
+            clearTimeout(this.#loadDataTimer);
+            this.#loadDataTimer = null;
+        }
+        if (this.#retryTimer) {
+            clearTimeout(this.#retryTimer);
+            this.#retryTimer = null;
+        }
+        this.#abortController?.abort();
+        this.#abortController = null;
+        this.cacheManager.abortPreload();
         this.eventManager.destroy();
         this.renderer.destroy();
+        this.stateManager.destroy?.();
+        this.container.classList.remove(
+            config.classes.tableContainer,
+            config.classes.selectable,
+            'theme-light',
+            'theme-dark',
+            'theme-default'
+        );
         this.db.close();
-
-        // Clear the cache of the instance-specific translation manager.
         this.translationManager.clearCache();
-
+        this.clearFormatCache();
+        this.selectedRows.clear();
+        this.currentRowIndex = -1;
         if (this.destroyOnUnload) {
             window.removeEventListener('beforeunload', this.#boundUnloadHandler);
         }
-    }
-
-    // Updates a mobile card with new data
-    public updateMobileCard(div: HTMLDivElement, row: T, index: number): void {
-        div.setAttribute('data-index', index.toString());
-        div.innerHTML = '';
-        this.state.columns.forEach((col: string) => {
-            const cardRow = document.createElement('div');
-            cardRow.classList.add(config.classes.cardRow);
-            cardRow.setAttribute('role', 'row');
-            const label = document.createElement('span');
-            label.classList.add(config.classes.cardLabel);
-            label.setAttribute('role', 'columnheader');
-            const value = document.createElement('span');
-            value.classList.add(config.classes.cardValue);
-            value.setAttribute('role', 'cell');
-            const colIdx = this.state.columns.indexOf(col);
-            const headerTitle = colIdx !== -1 ? this.state.columnTitles[colIdx] : col;
-            label.textContent = `${headerTitle}:`;
-            value.innerHTML = this.getFormattedValue(row[col as keyof T], col, row);
-            cardRow.appendChild(label);
-            cardRow.appendChild(value);
-            div.appendChild(cardRow);
-        });
+        window.removeEventListener('popstate', this.#boundPopState);
+        if (activeInstances.get(this.container) === this) {
+            activeInstances.delete(this.container);
+        }
     }
 
     // Reorders columns based on drag-and-drop interactions
     public reorderColumns(sourceColId: string, targetColId: string): void {
+        if (this.#destroyed) return;
         this.stateManager.setState((draft) => {
             // Find indices of source and target columns
             const sourceIndex = draft.columns.indexOf(sourceColId);
@@ -381,10 +437,12 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
             const [sourceColumn] = cols.splice(sourceIndex, 1);
             cols.splice(targetIndex, 0, sourceColumn);
 
-            const [sourceTitle] = titles.splice(sourceIndex, 1);
-            titles.splice(targetIndex, 0, sourceTitle);
+            if (titles.length === cols.length) {
+                const [sourceTitle] = titles.splice(sourceIndex, 1);
+                titles.splice(targetIndex, 0, sourceTitle);
+            }
 
-            if (classes.length > 0) {
+            if (classes.length === cols.length) {
                 const [sourceClass] = classes.splice(sourceIndex, 1);
                 classes.splice(targetIndex, 0, sourceClass);
             }
@@ -400,22 +458,34 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
     }
 
     // Formats a cell value, using cache and formatters if available
-    public getFormattedValue(value: unknown, column: string, row: T): string {
-        const cacheKey = `${row.id}_${column}`;
+    public getFormattedValue(value: unknown, column: string, row: T, rowIndex?: number): string {
+        const cacheKey = JSON.stringify([rowIndex ?? -1, row.id, column]);
 
         if (this.#formatCache.has(cacheKey)) {
             return this.#formatCache.get(cacheKey)!;
         }
 
-        const formatted =
-            this.columnFormatters && this.columnFormatters[column]
-                ? this.columnFormatters[column](value, row)
+        const hasFormatter = Boolean(this.columnFormatters?.[column]);
+        let formatted: string;
+        let treatAsHtml = hasFormatter;
+        try {
+            const raw = hasFormatter
+                ? this.columnFormatters![column](value, row)
                 : String(value ?? '');
+            formatted = typeof raw === 'string' ? raw : String(raw ?? '');
+        } catch (error) {
+            this.log(LogLevel.ERROR, `Formatter for column '${column}' threw:`, error);
+            formatted = String(value ?? '');
+            treatAsHtml = false;
+        }
 
-        let finalHtml = sanitizeHTML(formatted);
+        let finalHtml = treatAsHtml ? sanitizeHTML(formatted) : escapeHTML(formatted);
 
-        if (this.lazyLoadMedia) {
-            finalHtml = finalHtml.replace(/<img /g, '<img loading="lazy" ');
+        if (this.lazyLoadMedia && treatAsHtml) {
+            finalHtml = finalHtml.replace(
+                /<img(?![^>]*\bloading\s*=)(?=[\s>/])/gi,
+                '<img loading="lazy"'
+            );
         }
 
         this.#formatCache.set(cacheKey, finalHtml);
@@ -425,38 +495,59 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
 
     // Loads data, checking cache first and falling back to API fetch
     public async loadData(attempt: number = 1): Promise<void> {
-        if (!this.baseUrl) return;
+        if (this.#destroyed || !this.baseUrl || !this.state.translations) return;
+        if (this.#retryTimer) {
+            clearTimeout(this.#retryTimer);
+            this.#retryTimer = null;
+        }
+        this.#abortController?.abort();
+        this.#abortController = new AbortController();
+        const request = this.#abortController;
         this.#startPerfMark('data-load');
         this.log(LogLevel.INFO, 'Starting data load process...');
+        this.cacheManager.abortPreload();
         this.renderer.showLoading();
+        let url = this.baseUrl;
         try {
-            this.cacheManager.invalidateCache();
-            const url = this.urlManager.buildUrl(this.urlManager.getServerParams());
+            await this.cacheManager.invalidateCache();
+            if (this.#destroyed || this.#abortController !== request) return;
+            url = this.urlManager.buildUrl(this.urlManager.getServerParams());
 
             if (this.useCache) {
                 const cached = await this.cacheManager.getCachedData(url);
+                if (this.#destroyed || this.#abortController !== request) return;
                 if (cached && Date.now() - cached.timestamp < this.cacheExpiry) {
                     await this.#handleCachedResponse(cached);
                     return;
                 }
             }
-            await this.#fetchAndProcessData(url, attempt);
+            await this.#fetchAndProcessData(url, attempt, request);
         } catch (error) {
-            this.#handleDataLoadError(error, attempt, this.baseUrl);
+            this.#handleDataLoadError(error, attempt, url);
         } finally {
-            this.renderer.hideLoading();
+            if (!this.#destroyed && this.#abortController === request && !this.#retryTimer) {
+                this.renderer.hideLoading();
+            }
             this.#endPerfMark('data-load');
         }
     }
 
     // Performs a search with the provided filters
-    public search(filters: Record<string, string>, merge: boolean = false): void {
-        this.log(LogLevel.INFO, 'Performing search with filters:', { filters, merge });
+    public search(filtering: Record<string, string>, merge: boolean = false): void {
+        if (this.#destroyed) return;
+        this.log(LogLevel.INFO, 'Performing search with filtering:', { filtering, merge });
+        const next = compactFiltering(
+            merge ? { ...this.state.filtering, ...filtering } : filtering
+        );
+        if (
+            JSON.stringify(next) === JSON.stringify(this.state.filtering) &&
+            this.state.currentPage === 1
+        ) {
+            return;
+        }
         this.stateManager.setState((draft) => {
             draft.currentPage = 1;
-            (draft.filters as Record<string, string>) = merge
-                ? { ...draft.filters, ...filters }
-                : filters;
+            (draft.filtering as Record<string, string>) = next;
         });
         this.clearFormatCache();
         this.#debouncedLoadData();
@@ -464,92 +555,53 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
 
     // Returns the currently selected rows
     public getSelectedRows(): T[] {
-        return Array.from(this.selectedRows).map((index) => this.state.data[index]) as T[];
+        return Array.from(this.selectedRows)
+            .map((index) => this.state.data[index])
+            .filter((row): row is T => row !== undefined);
     }
 
-    // Updates a list item with new data
-    public updateListItem(li: HTMLLIElement, row: T, index: number): void {
-        li.setAttribute('data-index', index.toString());
-        const formattedContent = this.state.columns
-            .map((col: string) => {
-                const colIndex = this.state.columns.indexOf(col);
-                const headerTitle = colIndex !== -1 ? this.state.columnTitles[colIndex] : col;
-                const value = this.getFormattedValue(row[col as keyof T], col, row);
-                return `<strong>${headerTitle}:</strong> ${value}`;
-            })
-            .join(' | ');
-        li.innerHTML = formattedContent;
-    }
-
-    // Sets the number of rows per page
     public setRowsPerPage(newRowsPerPage: RowsPerPage): void {
-        if (this.state.rowsPerPage !== newRowsPerPage) {
-            this.log(LogLevel.INFO, `Setting rows per page to: ${newRowsPerPage}`);
-            this.stateManager.setState((draft) => {
-                draft.rowsPerPage = newRowsPerPage;
-                draft.currentPage = 1;
-            });
-            this.clearFormatCache();
-            this.#debouncedLoadData();
-            this.renderer.announceScreenReaderUpdate(`Rows per page changed to ${newRowsPerPage}`);
-        }
-    }
-
-    // Updates a table row with new data
-    public updateRow(tr: HTMLTableRowElement, row: T, index: number): void {
-        tr.setAttribute('data-index', index.toString());
-
-        const fragment = document.createDocumentFragment();
-        this.state.columns.forEach((col) => {
-            const colName = col as string;
-            const td = document.createElement('td');
-            td.setAttribute('role', 'gridcell');
-            td.setAttribute('data-col-id', colName);
-            const formattedValue = this.getFormattedValue(row[colName as keyof T], colName, row);
-            td.innerHTML = formattedValue;
-            td.dataset.lastValue = formattedValue;
-            fragment.appendChild(td);
+        const next = sanitizeRowsPerPage(newRowsPerPage, this.state.rowsPerPage);
+        if (this.#destroyed || this.state.rowsPerPage === next) return;
+        this.log(LogLevel.INFO, `Setting rows per page to: ${next}`);
+        this.stateManager.setState((draft) => {
+            draft.rowsPerPage = next;
+            draft.currentPage = 1;
         });
-
-        tr.innerHTML = '';
-        tr.appendChild(fragment);
+        this.clearFormatCache();
+        this.#debouncedLoadData();
+        const message = (this.state.translations ?? defaultTranslations).rowsPerPageChanged.replace(
+            '{count}',
+            String(next)
+        );
+        this.renderer.announceScreenReaderUpdate(message);
     }
 
-    // Creates a new table row
-    public createTableRow(row: T, index: number, rowKey: string | number): HTMLTableRowElement {
-        const tr = document.createElement('tr');
-        tr.setAttribute('role', 'row');
-        tr.setAttribute('data-index', index.toString());
-        tr.setAttribute('data-key', String(rowKey));
-        this.state.columns.forEach((col) => {
-            const colName = col as string;
-            const td = document.createElement('td');
-            td.setAttribute('role', 'gridcell');
-            td.setAttribute('data-col-id', colName);
-            const formattedValue = this.getFormattedValue(row[colName as keyof T], colName, row);
-            td.innerHTML = formattedValue;
-            td.dataset.lastValue = formattedValue;
-            tr.appendChild(td);
-        });
-        return tr;
-    }
-
-    // Resets the instance to its initial state
     public reset(): void {
+        if (this.#destroyed) return;
         this.log(LogLevel.INFO, 'Resetting instance to initial state.');
         if (this.persistState) localStorage.removeItem(this.storageKey);
         this.stateManager.setState((draft) => {
             const configOptions = this.#config.options;
             draft.currentPage = 1;
-            (draft.filters as Record<string, string>) = {};
-            (draft.sortConditions as SortCondition[]) = [];
+            (draft.filtering as Record<string, string>) = compactFiltering(
+                configOptions.filtering ?? {}
+            );
+            (draft.sorting as SortCondition[]) = normalizeSorting(configOptions.sorting ?? []);
+            draft.rowsPerPage = sanitizeRowsPerPage(
+                configOptions.rowsPerPage ?? RowsPerPage.DEFAULT,
+                RowsPerPage.DEFAULT
+            ) as RowsPerPage;
             (draft.columns as string[]) = [...(configOptions.columns || [])];
             (draft.columnTitles as string[]) = [
-                ...(configOptions.columnTitles || configOptions.columns || []),
+                ...(configOptions.columnTitles?.length
+                    ? configOptions.columnTitles
+                    : configOptions.columns || []),
             ];
             (draft.headerCellClasses as string[]) = [...(configOptions.headerCellClasses || [])];
             (draft.columnWidths as Map<string, number>) = new Map();
         });
+        this.clearSelection();
         this.clearFormatCache();
         this.#debouncedLoadData();
     }
@@ -557,55 +609,134 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
     // Updates state parameters and triggers a data reload
     public updateParams(
         params: Partial<
-            Pick<SnapRecordsState<T>, 'currentPage' | 'rowsPerPage' | 'filters' | 'sortConditions'>
+            Pick<SnapRecordsState<T>, 'currentPage' | 'rowsPerPage' | 'filtering' | 'sorting'>
         >
     ): void {
+        if (this.#destroyed) return;
         this.log(LogLevel.INFO, 'Updating parameters.', params);
+        const previousState = this.state;
         this.stateManager.setState((draft) => {
-            Object.assign(draft, params);
+            const pageExplicit = params.currentPage !== undefined;
+            if (params.rowsPerPage !== undefined) {
+                const nextRpp = sanitizeRowsPerPage(params.rowsPerPage, draft.rowsPerPage);
+                if (nextRpp !== draft.rowsPerPage) {
+                    draft.rowsPerPage = nextRpp;
+                    if (!pageExplicit) draft.currentPage = 1;
+                }
+            }
+            if (params.filtering !== undefined) {
+                const next = compactFiltering(params.filtering);
+                if (JSON.stringify(next) !== JSON.stringify(draft.filtering)) {
+                    (draft.filtering as Record<string, string>) = next;
+                    if (!pageExplicit) draft.currentPage = 1;
+                }
+            }
+            if (params.sorting !== undefined) {
+                const nextSorting = normalizeSorting(params.sorting);
+                if (JSON.stringify(nextSorting) !== JSON.stringify(draft.sorting)) {
+                    (draft.sorting as SortCondition[]) = nextSorting;
+                    if (!pageExplicit) draft.currentPage = 1;
+                }
+            }
+            if (pageExplicit) {
+                let nextPage = Math.max(1, Math.trunc(params.currentPage!) || 1);
+                if (draft.totalRecords > 0) {
+                    const totalPages = Math.max(
+                        1,
+                        Math.ceil(draft.totalRecords / draft.rowsPerPage)
+                    );
+                    nextPage = Math.min(nextPage, totalPages);
+                }
+                draft.currentPage = nextPage;
+            }
         });
+        if (this.state === previousState) return;
         this.clearFormatCache();
         this.#debouncedLoadData();
     }
 
     // Handles a cached response by updating state and rendering
     async #handleCachedResponse(cached: CacheData<T>): Promise<void> {
+        if (this.#destroyed) return;
         this.log(LogLevel.INFO, 'Using cached response for URL:', cached.url);
+        this.invokeLifecycleHook('preDataLoad', this.urlManager.getServerParams());
+        this.#resetViewSelection();
         this.stateManager.setState((draft) => {
             (draft.data as T[]) = cached.data;
-            draft.totalRecords = cached.totalRecords;
+            draft.totalRecords = resolveTotalRecords(cached.totalRecords, cached.data.length);
         });
+        if (this.#redirectIfPageOutOfRange()) {
+            await this.loadData();
+            return;
+        }
+        if (this.#destroyed) return;
+        this.clearFormatCache();
+        this.invokeLifecycleHook('postDataLoad', this.state.data);
         this.renderer.render();
         this.eventManager.setupAllHandlers();
-        if (this.preloadNextPageEnabled) this.cacheManager.preloadNextPage();
+        if (this.preloadNextPage) this.cacheManager.preloadNextPage();
     }
 
     // Fetches data from the API and processes the response
-    async #fetchAndProcessData(url: string, attempt: number): Promise<void> {
+    async #fetchAndProcessData(
+        url: string,
+        attempt: number,
+        request: AbortController
+    ): Promise<void> {
+        if (this.#destroyed) return;
         this.log(LogLevel.INFO, `Fetching data from URL (Attempt ${attempt}): ${url}`);
-        if (this.lifecycleHooks.preDataLoad)
-            this.lifecycleHooks.preDataLoad(this.urlManager.getServerParams());
-        const response = await fetch(url);
-        if (!response.ok) throw new SnapRecordsDataError(`HTTP error! status: ${response.status}`);
-        const data = await response.json();
-        await this.#processSuccessfulResponse(data, url);
+        this.invokeLifecycleHook('preDataLoad', this.urlManager.getServerParams());
+        const response = await fetch(url, { signal: request.signal });
+        if (this.#destroyed || this.#abortController !== request) return;
+        if (!response.ok) {
+            throw new SnapRecordsDataError(
+                `HTTP error! status: ${response.status}`,
+                response.status
+            );
+        }
+        let data: unknown;
+        try {
+            data = await response.json();
+        } catch {
+            throw new SnapRecordsDataError('Invalid API response', response.status);
+        }
+        if (
+            !data ||
+            typeof data !== 'object' ||
+            !Array.isArray((data as { data?: unknown }).data)
+        ) {
+            throw new SnapRecordsDataError('Invalid API response', response.status);
+        }
+        await this.#processSuccessfulResponse(
+            data as { data: T[]; totalRecords: number },
+            url,
+            request
+        );
     }
 
     // Processes a successful API response
     async #processSuccessfulResponse(
         data: { data: T[]; totalRecords: number },
-        url: string
+        url: string,
+        request?: AbortController
     ): Promise<void> {
+        if (this.#destroyed) return;
         const receivedData: T[] = data.data || [];
         this.log(LogLevel.INFO, 'Successfully fetched and processed data.', {
             url,
             totalRecords: data.totalRecords,
             receivedCount: receivedData.length,
         });
+        this.#resetViewSelection();
         this.stateManager.setState((draft) => {
             (draft.data as T[]) = receivedData;
-            draft.totalRecords = data.totalRecords || 0;
+            draft.totalRecords = resolveTotalRecords(data.totalRecords, receivedData.length);
         });
+        if (this.#destroyed || (request && this.#abortController !== request)) return;
+        if (this.#redirectIfPageOutOfRange()) {
+            await this.loadData();
+            return;
+        }
         if (this.useCache)
             await this.cacheManager.cacheData(url, {
                 url: url,
@@ -613,28 +744,65 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
                 totalRecords: this.state.totalRecords,
                 timestamp: Date.now(),
             });
-        if (this.lifecycleHooks.postDataLoad) this.lifecycleHooks.postDataLoad(this.state.data);
+        if (this.#destroyed || (request && this.#abortController !== request)) return;
+        this.invokeLifecycleHook('postDataLoad', this.state.data);
         this.clearFormatCache();
         this.renderer.render();
         this.eventManager.setupAllHandlers();
-        if (this.preloadNextPageEnabled) this.cacheManager.preloadNextPage();
+        if (this.preloadNextPage) this.cacheManager.preloadNextPage();
     }
 
     // Sets the language and reloads translations
     public async setLanguage(newLanguage: string): Promise<void> {
-        if (this.state.language !== newLanguage) {
-            this.log(LogLevel.INFO, `Setting language to: ${newLanguage}`);
-            // Use the instance-specific translation manager to get the new language file.
+        const safeLang = sanitizeLanguage(newLanguage);
+        if (this.#destroyed || this.state.language === safeLang) return;
+        this.log(LogLevel.INFO, `Setting language to: ${safeLang}`);
+        try {
             const translations =
-                (await this.translationManager.get(newLanguage)) ?? defaultTranslations;
+                (await this.translationManager.get(safeLang)) ?? defaultTranslations;
+            if (this.#destroyed) return;
             this.stateManager.setState((draft) => {
-                (draft.language as string) = newLanguage;
+                (draft.language as string) = safeLang;
                 draft.translations = translations;
             });
             this.clearFormatCache();
             this.renderer.render();
             this.eventManager.setupAllHandlers();
+        } catch (error) {
+            if (this.#destroyed) return;
+            if (error instanceof Error && error.name === 'AbortError') return;
+            this.log(LogLevel.ERROR, `Failed to load language '${safeLang}'`, error);
+            if (!this.state.translations) {
+                this.stateManager.setState((draft) => {
+                    draft.translations = defaultTranslations as Translation;
+                });
+                this.renderer.render();
+                this.eventManager.setupAllHandlers();
+            }
         }
+    }
+
+    #redirectIfPageOutOfRange(): boolean {
+        if (this.state.totalRecords <= 0) {
+            if (this.state.currentPage !== 1) {
+                this.stateManager.setState((draft) => {
+                    draft.currentPage = 1;
+                });
+                return true;
+            }
+            return false;
+        }
+        const totalPages = Math.max(1, Math.ceil(this.state.totalRecords / this.state.rowsPerPage));
+        if (this.state.currentPage <= totalPages) return false;
+        this.stateManager.setState((draft) => {
+            draft.currentPage = totalPages;
+        });
+        return true;
+    }
+
+    #resetViewSelection(): void {
+        this.currentRowIndex = -1;
+        this.clearSelection();
     }
 
     #startPerfMark(label: string) {
@@ -642,33 +810,60 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
     }
 
     #endPerfMark(label: string) {
-        if (this.debug) {
-            performance.mark(`${label}-end`);
-            performance.measure(label, `${label}-start`, `${label}-end`);
-            const measure = performance.getEntriesByName(label)[0];
-            this.log(LogLevel.INFO, `${label} took ${measure.duration}ms`);
+        if (!this.debug) return;
+        const start = `${label}-start`;
+        const end = `${label}-end`;
+        try {
+            performance.mark(end);
+            performance.measure(label, start, end);
+            const measures = performance.getEntriesByName(label, 'measure');
+            const measure = measures[measures.length - 1];
+            if (measure) this.log(LogLevel.INFO, `${label} took ${measure.duration}ms`);
+        } catch (error) {
+            this.log(LogLevel.LOG, `Could not measure '${label}'`, error);
+        } finally {
+            performance.clearMarks(start);
+            performance.clearMarks(end);
+            performance.clearMeasures(label);
         }
     }
 
     // Creates a debounced version of a function
     #debounce(fn: DebounceableFunction, delay: number): () => void {
-        let timeoutId: number | null = null;
         return (...args: unknown[]) => {
-            if (timeoutId) clearTimeout(timeoutId);
-            timeoutId = window.setTimeout(() => fn(...args), delay);
+            if (this.#destroyed) return;
+            if (this.#loadDataTimer) clearTimeout(this.#loadDataTimer);
+            this.#loadDataTimer = window.setTimeout(() => {
+                this.#loadDataTimer = null;
+                if (!this.#destroyed) fn(...args);
+            }, delay);
         };
     }
 
     // Handles data load errors with retries
     #handleDataLoadError(error: unknown, _attempt: number, url: string): void {
-        if (_attempt <= this.retryAttempts && !(error instanceof SnapRecordsDataError)) {
-            this.log(LogLevel.WARN, `Retry attempt ${_attempt} for URL:`, url, { error });
-            this.loadData(_attempt + 1);
+        if (this.#destroyed) return;
+        if (error instanceof Error && error.name === 'AbortError') {
+            this.log(LogLevel.INFO, 'Data load aborted.');
             return;
         }
+        const httpStatus = error instanceof SnapRecordsDataError ? error.status : undefined;
+        const retryable =
+            !(error instanceof SnapRecordsDataError) ||
+            (typeof httpStatus === 'number' && httpStatus >= 500);
+        if (_attempt <= this.retryAttempts && retryable) {
+            this.log(LogLevel.WARN, `Retry attempt ${_attempt} for URL:`, url, { error });
+            const delay = Math.min(2000, 500 * _attempt);
+            this.#retryTimer = window.setTimeout(() => {
+                this.#retryTimer = null;
+                if (!this.#destroyed) void this.loadData(_attempt + 1);
+            }, delay);
+            return;
+        }
+        const detail = error instanceof Error ? error.message : String(error);
         const errMessage = (
             this.state.translations ?? defaultTranslations
-        ).errors.dataLoadingFailed.replace('{error}', (error as Error).message);
+        ).errors.dataLoadingFailed.replace('{error}', detail);
         this.log(LogLevel.ERROR, 'Data load failed after all retries:', { error, url });
         this.renderer.showError(errMessage);
     }
@@ -676,33 +871,35 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
     // Initializes the component by setting up containers, loading state, and fetching data
     async #initialize(): Promise<void> {
         this.log(LogLevel.INFO, 'Starting component initialization...');
-        // Create UI containers
         this.renderer.createContainers();
-        // Load persisted state if enabled
-        if (this.persistState) this.stateManager.loadStateFromStorage();
-        // Load state from URL if enabled
-        this.stateManager.loadFromURL();
-        // Apply the current theme
+        this.stateManager.suppressUrlUpdates(() => {
+            if (this.persistState) this.stateManager.loadStateFromStorage();
+            this.stateManager.loadFromURL();
+        });
+        this.lastFilterHash = JSON.stringify(compactFiltering(this.state.filtering));
+        if (this.usePushState) {
+            this.stateManager.updateURLState('replace');
+            window.addEventListener('popstate', this.#boundPopState);
+        }
         this.renderer.applyThemeClass();
 
         try {
-            // Load translations for the current language
-            // Load translations for the current language using the instance-specific manager.
             const translations =
                 (await this.translationManager.get(this.state.language)) ?? defaultTranslations;
+            if (this.#destroyed) return;
             this.stateManager.setState((draft) => {
                 draft.translations = translations;
             });
         } catch (error) {
-            // Handle translation loading errors by falling back to default translations
+            if (this.#destroyed) return;
             this.log(LogLevel.ERROR, 'Failed to initialize translations', error);
             const defaultTrans = defaultTranslations as Translation;
             this.stateManager.setState((draft) => {
                 draft.translations = defaultTrans;
             });
-            this.renderer.showError(defaultTrans.errors.generic);
+            this.log(LogLevel.WARN, 'Using bundled English translations after load failure.');
         } finally {
-            // Render the UI, set up event handlers, and load data
+            if (this.#destroyed) return;
             this.renderer.render();
             this.eventManager.setupAllHandlers();
             this.#debouncedLoadData();
@@ -718,19 +915,40 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
         this.useCache = options.useCache ?? false;
         this.usePushState = options.usePushState ?? false;
         this.columnFormatters = options.columnFormatters;
-        this.debounceDelay = config.constants.defaultDebounceDelay;
-        this.cacheExpiry = options.cacheExpiry ?? config.constants.defaultCacheExpiry;
+        const expiry = Math.trunc(
+            Number(options.cacheExpiry ?? config.constants.defaultCacheExpiry)
+        );
+        this.cacheExpiry =
+            Number.isFinite(expiry) && expiry >= 0 ? expiry : config.constants.defaultCacheExpiry;
         this.selectable = options.selectable ?? false;
         this.lifecycleHooks = options.lifecycleHooks ?? {};
         this.draggableColumns = options.draggableColumns ?? false;
-        this.preloadNextPageEnabled = options.preloadNextPage ?? false;
+        this.preloadNextPage = options.preloadNextPage ?? false;
         this.lazyLoadMedia = options.lazyLoadMedia ?? false;
         this.persistState = options.persistState ?? false;
         this.destroyOnUnload = options.destroyOnUnload ?? true;
-        this.retryAttempts = options.retryAttempts ?? 3;
-        this.formatCacheSize = options.formatCacheSize ?? 500;
-        this.prevButtonConfig = { ...config.pagination.prevButton, ...options.prevButton };
-        this.nextButtonConfig = { ...config.pagination.nextButton, ...options.nextButton };
+        const retries = Math.trunc(Number(options.retryAttempts ?? 3));
+        this.retryAttempts = Number.isFinite(retries) ? Math.min(10, Math.max(0, retries)) : 3;
+        const delay = Math.trunc(
+            Number(options.debounceDelay ?? config.constants.defaultDebounceDelay)
+        );
+        this.debounceDelay = Number.isFinite(delay)
+            ? Math.min(10000, Math.max(0, delay))
+            : config.constants.defaultDebounceDelay;
+        const cacheSize = Math.trunc(Number(options.formatCacheSize ?? 500));
+        this.formatCacheSize = Number.isFinite(cacheSize)
+            ? Math.min(100000, Math.max(1, cacheSize))
+            : 500;
+        this.prevButtonConfig = {
+            ...config.pagination.prevButton,
+            ...options.prevButton,
+            classNames: { ...config.pagination.prevButton.classNames },
+        };
+        this.nextButtonConfig = {
+            ...config.pagination.nextButton,
+            ...options.nextButton,
+            classNames: { ...config.pagination.nextButton.classNames },
+        };
         this.#boundUnloadHandler = this.destroy.bind(this);
         if (this.destroyOnUnload) window.addEventListener('beforeunload', this.#boundUnloadHandler);
     }

@@ -1,5 +1,12 @@
 import type { SnapRecords } from './SnapRecords.js';
-import { ISnapApi, RenderType, RowsPerPage, Identifiable, SnapRecordsState } from './SnapTypes.js';
+import {
+    ISnapApi,
+    RenderType,
+    RowsPerPage,
+    SnapTheme,
+    Identifiable,
+    SnapRecordsState,
+} from './SnapTypes.js';
 
 /*========================================================================================================
 
@@ -28,6 +35,10 @@ export class SnapApi<T extends Identifiable & Record<string, unknown>> implement
         this.#instance = instance;
     }
 
+    public get isDestroyed(): boolean {
+        return this.#instance.isDestroyed;
+    }
+
     // Resets the SnapRecords instance to its initial state
     public reset(): void {
         this.#instance.reset();
@@ -49,8 +60,8 @@ export class SnapApi<T extends Identifiable & Record<string, unknown>> implement
     }
 
     // Navigates to the specified page
-    public gotoPage(page: number): void {
-        this.#instance.gotoPage(page);
+    public setCurrentPage(page: number): void {
+        this.#instance.setCurrentPage(page);
     }
 
     // Returns the current data array
@@ -68,14 +79,13 @@ export class SnapApi<T extends Identifiable & Record<string, unknown>> implement
         return this.#instance.getTotals();
     }
 
-    // Sets the theme (light or dark)
-    public setTheme(theme: 'light' | 'dark'): void {
+    public setTheme(theme: SnapTheme): void {
         this.#instance.setTheme(theme);
     }
 
     // Sets the rendering mode (table, list, or mobile cards)
-    public setRenderMode(mode: RenderType): void {
-        this.#instance.setRenderMode(mode);
+    public setFormat(mode: RenderType): void {
+        this.#instance.setFormat(mode);
     }
 
     // Sets the number of rows per page
@@ -89,14 +99,13 @@ export class SnapApi<T extends Identifiable & Record<string, unknown>> implement
     }
 
     // Performs a search with the provided filters
-    public search(filters: Record<string, string>, merge = false): void {
-        this.#instance.search(filters, merge);
+    public search(filtering: Record<string, string>, merge = false): void {
+        this.#instance.search(filtering, merge);
     }
 
-    // Updates state parameters (page, rows per page, filters, sort conditions)
     public updateParams(
         params: Partial<
-            Pick<SnapRecordsState<T>, 'currentPage' | 'rowsPerPage' | 'filters' | 'sortConditions'>
+            Pick<SnapRecordsState<T>, 'currentPage' | 'rowsPerPage' | 'filtering' | 'sorting'>
         >
     ): void {
         this.#instance.updateParams(params);

@@ -14,7 +14,10 @@ import { defineConfig } from 'vite';
 export default defineConfig(({ mode }) => ({
     plugins: [
         dts({
-            rollupTypes: true,
+            processor: 'ts',
+            tsconfigPath: './tsconfig.json',
+            include: ['src'],
+            bundleTypes: true,
             insertTypesEntry: true,
         }),
     ],
@@ -25,14 +28,14 @@ export default defineConfig(({ mode }) => ({
         outDir: 'dist',
         sourcemap: true,
         minify: 'terser',
-         terserOptions: {
+        terserOptions: {
             format: {
                 comments: false,
             },
             compress: {
                 drop_console: true,
                 drop_debugger: true,
-            }
+            },
         },
         rollupOptions: {
             output: {
@@ -40,12 +43,12 @@ export default defineConfig(({ mode }) => ({
                 assetFileNames: 'snap-records.[ext]',
             },
         },
-         lib: {
+        lib: {
             name: 'SnapRecords',
-            entry: path.resolve(__dirname, 'src/index.ts'),
+            entry: path.resolve(import.meta.dirname, 'src/index.ts'),
             fileName: (format) => `snap-records.${format}.js`,
         },
-    }
+    },
 }));
 
 /*=============================================================================================================

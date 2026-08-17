@@ -1,5 +1,6 @@
-import { log } from './utils.js';
+import { log, sanitizeLanguage } from './utils.js';
 import { Translation, LogLevel } from './SnapTypes.js';
+import defaultTranslations from './lang/en_US.json';
 
 /*========================================================================================================
 
@@ -30,11 +31,14 @@ export class TranslationManager {
     readonly #fallbackLang = 'en_US';
     // In-memory cache for loaded translations
     #cache: Map<string, Translation> = new Map();
+    #controller = new AbortController();
     // Logger function provided by the parent SnapRecords instance
     #logger: (level: LogLevel, message: string, ...args: unknown[]) => void;
 
     // Clears the translation cache
     public clearCache(): void {
+        this.#controller.abort();
+        this.#controller = new AbortController();
         this.#cache.clear();
         this.#logger(LogLevel.INFO, 'Translation cache cleared.');
     }
@@ -47,7 +51,7 @@ export class TranslationManager {
         debug: boolean = false,
         logger?: (level: LogLevel, message: string, ...args: unknown[]) => void
     ) {
-        this.#langPath = langPath;
+        this.#langPath = (langPath || '/lang').replace(/\/+$/, '') || '/lang';
         this.#debug = debug;
         // Use the provided logger or default to utils.log
         this.#logger =
@@ -56,61 +60,110 @@ export class TranslationManager {
 
     // Fetches or retrieves cached translations for a given language
     public async get(lang: string): Promise<Translation> {
-        // Return cached translation if available
-        if (this.#cache.has(lang)) {
-            this.#logger(LogLevel.INFO, `Translation for ${lang} found in cache.`);
-            return this.#cache.get(lang)!;
+        const safeLang = sanitizeLanguage(lang);
+        if (!safeLang) {
+            return defaultTranslations as Translation;
+        }
+        if (this.#cache.has(safeLang)) {
+            this.#logger(LogLevel.INFO, `Translation for ${safeLang} found in cache.`);
+            return this.#cache.get(safeLang)!;
         }
 
-        this.#logger(LogLevel.INFO, `Attempting to load translation for: ${lang}`);
+        this.#logger(LogLevel.INFO, `Attempting to load translation for: ${safeLang}`);
+        const signal = this.#controller.signal;
 
-        // Attempt to fetch translation with retries
         for (let attempt = 1; attempt <= this.#maxRetries + 1; attempt++) {
+            if (signal.aborted) {
+                const abortError = new Error('Translation load aborted.');
+                abortError.name = 'AbortError';
+                throw abortError;
+            }
             try {
-                // Fetch translation file from the server using the configured path
-                const response = await fetch(`${this.#langPath}/${lang}.json`);
+                const response = await fetch(`${this.#langPath}/${safeLang}.json`, {
+                    signal,
+                });
                 if (!response.ok) {
                     throw new Error(
-                        `Translation file for ${lang} not found (status: ${response.status}).`
+                        `Translation file for ${safeLang} not found (status: ${response.status}).`
                     );
                 }
-                // Parse and cache the translation
-                const translation: Translation = await response.json();
-                this.#cache.set(lang, translation);
-                this.#logger(LogLevel.INFO, `Translation for ${lang} loaded and cached.`);
+                const translation = this.#mergeWithDefaults(await response.json());
+                this.#cache.set(safeLang, translation);
+                this.#logger(LogLevel.INFO, `Translation for ${safeLang} loaded and cached.`);
                 return translation;
             } catch (error) {
+                if (error instanceof Error && error.name === 'AbortError') {
+                    throw error;
+                }
                 this.#logger(
                     LogLevel.ERROR,
-                    `Failed to load translation for ${lang} (attempt ${attempt}):`,
+                    `Failed to load translation for ${safeLang} (attempt ${attempt}):`,
                     error
                 );
-                // Handle fetch failure
                 if (attempt > this.#maxRetries) {
-                    // Fall back to default language if all retries fail
-                    if (lang === this.#fallbackLang) {
-                        // Prevent infinite recursion if fallback fails
+                    if (safeLang === this.#fallbackLang) {
                         this.#logger(
                             LogLevel.ERROR,
                             `CRITICAL: Fallback translation '${this.#fallbackLang}' failed to load.`
                         );
-                        throw new Error(
-                            `CRITICAL: Fallback translation '${this.#fallbackLang}' failed to load.`
-                        );
+                        return defaultTranslations as Translation;
                     }
                     this.#logger(
                         LogLevel.WARN,
-                        `All retries failed for ${lang}. Falling back to ${this.#fallbackLang}.`
+                        `All retries failed for ${safeLang}. Falling back to ${this.#fallbackLang}.`
                     );
-                    // Attempt to fetch fallback language
                     return this.get(this.#fallbackLang);
                 }
-                // Wait before retrying
-                await new Promise((resolve) => setTimeout(resolve, this.#retryDelay * attempt));
+                await this.#delay(this.#retryDelay * attempt, signal);
             }
         }
-        // Unreachable code for TypeScript validation
-        throw new Error(`Failed to load translation for ${lang} and its fallback.`);
+        return defaultTranslations as Translation;
+    }
+
+    #delay(ms: number, signal: AbortSignal): Promise<void> {
+        return new Promise((resolve, reject) => {
+            if (signal.aborted) {
+                const abortError = new Error('Translation load aborted.');
+                abortError.name = 'AbortError';
+                reject(abortError);
+                return;
+            }
+            const timer = setTimeout(() => {
+                signal.removeEventListener('abort', onAbort);
+                resolve();
+            }, ms);
+            const onAbort = () => {
+                clearTimeout(timer);
+                const abortError = new Error('Translation load aborted.');
+                abortError.name = 'AbortError';
+                reject(abortError);
+            };
+            signal.addEventListener('abort', onAbort, { once: true });
+        });
+    }
+
+    #mergeWithDefaults(partial: unknown): Translation {
+        return this.#mergeStringTree(defaultTranslations as Translation, partial) as Translation;
+    }
+
+    #mergeStringTree<T>(defaults: T, src: unknown): T {
+        const input =
+            src && typeof src === 'object' && !Array.isArray(src)
+                ? (src as Record<string, unknown>)
+                : {};
+        const result = { ...defaults } as T;
+        (Object.keys(defaults as object) as (keyof T)[]).forEach((key) => {
+            const fallback = defaults[key];
+            if (fallback && typeof fallback === 'object' && !Array.isArray(fallback)) {
+                result[key] = this.#mergeStringTree(fallback, input[key as string]) as T[keyof T];
+                return;
+            }
+            if (typeof fallback === 'string') {
+                const value = input[key as string];
+                result[key] = (typeof value === 'string' ? value : fallback) as T[keyof T];
+            }
+        });
+        return result;
     }
 }
 

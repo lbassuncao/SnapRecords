@@ -3,10 +3,11 @@ import {
     RowsPerPage,
     Identifiable,
     LifecycleHooks,
+    RenderType,
     SnapRecordsOptions,
     SnapRecordsConfigError,
 } from './SnapTypes.js';
-import { log } from './utils.js';
+import { log, sanitizeRowsPerPage, compactFiltering, normalizeSorting } from './utils.js';
 import { defaultOptions } from './SnapOptions.js';
 
 /*========================================================================================================
@@ -49,8 +50,34 @@ export class Configuration<T extends Identifiable & Record<string, unknown>> {
         this.validateUrl();
         this.validateColumns();
         this.validateRowsPerPage();
+        this.validateFiltering();
+        this.validateSorting();
+        this.validateTheme();
+        this.validateFormat();
         this.validateFormatters();
         this.validateLifecycleHooks();
+    }
+
+    private validateTheme(): void {
+        const theme = this.options.theme;
+        if (theme && theme !== 'light' && theme !== 'dark' && theme !== 'default') {
+            this.logger(
+                LogLevel.WARN,
+                `Invalid theme '${String(theme)}'. Falling back to 'default'.`
+            );
+            this.options.theme = 'default';
+        }
+    }
+
+    private validateFormat(): void {
+        const format = this.options.format;
+        if (format && !Object.values(RenderType).includes(format)) {
+            this.logger(
+                LogLevel.WARN,
+                `Invalid format '${String(format)}'. Falling back to table.`
+            );
+            this.options.format = RenderType.TABLE;
+        }
     }
 
     // Validates lifecycle hooks
@@ -122,12 +149,33 @@ export class Configuration<T extends Identifiable & Record<string, unknown>> {
     // Validates the rowsPerPage option
     private validateRowsPerPage(): void {
         const rpp = this.options.rowsPerPage ?? RowsPerPage.DEFAULT;
-        // Check if rowsPerPage is within the recommended range
-        if (typeof rpp !== 'number' || rpp < 1 || rpp > 1000) {
+        const sanitized = sanitizeRowsPerPage(rpp, RowsPerPage.DEFAULT);
+        if (sanitized !== rpp) {
             this.logger(
                 LogLevel.WARN,
-                `rowsPerPage value '${rpp}' is outside the recommended range (1-1000).`
+                `rowsPerPage value '${rpp}' is invalid. Falling back to ${sanitized}.`
             );
+            this.options.rowsPerPage = sanitized;
+        }
+    }
+
+    private validateFiltering(): void {
+        const filtering = this.options.filtering;
+        if (filtering === undefined) return;
+        if (!filtering || typeof filtering !== 'object' || Array.isArray(filtering)) {
+            this.logger(LogLevel.WARN, 'filtering must be a plain object. Falling back to {}.');
+            this.options.filtering = {};
+            return;
+        }
+        this.options.filtering = compactFiltering(filtering);
+    }
+
+    private validateSorting(): void {
+        if (this.options.sorting === undefined) return;
+        const normalized = normalizeSorting(this.options.sorting);
+        if (JSON.stringify(normalized) !== JSON.stringify(this.options.sorting)) {
+            this.logger(LogLevel.WARN, 'Invalid sorting entries were dropped or normalized.');
+            this.options.sorting = normalized;
         }
     }
 }

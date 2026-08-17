@@ -34,15 +34,19 @@
         background: var(--sr-bg-primary);
         border-radius: $border-radius;
         padding: var(--sr-spacing-padding);
-        cursor: pointer;
         color: var(--sr-text-primary);
 
         &:hover {
             background-color: var(--sr-bg-interactive-hover);
         }
 
-        &.snap-selected {
+        &.snap-selected,
+        &.snap-current-row {
             background-color: var(--sr-bg-interactive-selected);
+        }
+
+        &.snap-current-row {
+            @include box-shadow(inset 0 0 0 2px var(--sr-state-primary));
         }
 
         .snap-card-row {
@@ -60,6 +64,10 @@
         .snap-card-value {
             color: var(--sr-text-primary);
         }
+    }
+
+    &.snap-selectable .snap-mobile-card {
+        cursor: pointer;
     }
 
     .snap-footer {

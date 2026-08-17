@@ -7,10 +7,10 @@ import {
     ISnapEventManager,
     EventManagerCallbacks,
 } from './SnapTypes.js';
-import { log } from './utils.js';
 import { config } from './SnapOptions.js';
 import type { SnapRecords } from './SnapRecords.js';
 import defaultTranslations from './lang/en_US.json';
+import { escapeAttributeValue } from './utils.js';
 
 /*========================================================================================================
 
@@ -31,9 +31,9 @@ import defaultTranslations from './lang/en_US.json';
 
 ==========================================================================================================*/
 
-export class EventManager<T extends Identifiable & Record<string, unknown>>
-    implements ISnapEventManager
-{
+export class EventManager<
+    T extends Identifiable & Record<string, unknown>,
+> implements ISnapEventManager {
     // Reference to the parent SnapRecords instance
     #parent: SnapRecords<T>;
     // Renderer instance for updating the UI
@@ -60,6 +60,7 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
 
     // Sets up all event handlers for user interactions
     public setupAllHandlers(): void {
+        if (this.#parent.isDestroyed) return;
         this.#setupDelegatedClickHandler();
         this.#setupColumnResizing();
         this.#setupColumnDragging();
@@ -68,25 +69,18 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
 
     // Removes all event listeners and cleans up
     public destroy(): void {
-        log(
-            this.#parent.debug,
-            LogLevel.INFO,
-            'Destroying EventManager and removing all listeners.'
-        );
-        // Remove click handler
+        this.#parent.log(LogLevel.INFO, 'Destroying EventManager and removing all listeners.');
         this.#parent.container.removeEventListener('click', this.#handleDelegatedClick);
-        // Remove keyboard handler
         this.#parent.container.removeEventListener('keydown', this.#handleKeyDown);
-        // Remove resize handlers
-        this.#parent.container.removeEventListener('mousedown', this.#startResize as EventListener);
-        // Remove drag-and-drop handlers
+        this.#parent.container.removeEventListener('mousedown', this.#handleResizeMouseDown);
         this.#parent.container.removeEventListener('dragstart', this.#handleDragStart);
         this.#parent.container.removeEventListener('dragover', this.#handleDragOver);
         this.#parent.container.removeEventListener('drop', this.#handleDrop);
         this.#parent.container.removeEventListener('dragend', this.#handleDragEnd);
-        // Remove document-level resize handlers
         document.removeEventListener('mouseup', this.#stopResize);
         document.removeEventListener('mousemove', this.#handleResize);
+        this.#parent.container.removeAttribute('tabindex');
+        this.#resizingColumnId = null;
     }
 
     // Sets up a delegated click handler for the container
@@ -99,20 +93,22 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
 
     // Handles sort requests when a column header is clicked
     #handleSortClick = (col: string): void => {
-        log(this.#parent.debug, LogLevel.INFO, `Sort requested for column: ${col}`);
+        if (this.#parent.isDestroyed) return;
+        this.#parent.log(LogLevel.INFO, `Sort requested for column: ${col}`);
         this.#parent.stateManager.setState((draft) => {
-            const sortConditions = draft.sortConditions as SortCondition[];
-            const sortIndex = sortConditions.findIndex((item: SortCondition) => item[0] === col);
+            draft.currentPage = 1;
+            const sorting = draft.sorting as SortCondition[];
+            const sortIndex = sorting.findIndex((item: SortCondition) => item[0] === col);
 
-            // Toggle sort order: none -> ASC -> DESC -> none
             if (sortIndex === -1) {
-                sortConditions.push([col, OrderDirection.ASC]);
-            } else if (sortConditions[sortIndex][1] === OrderDirection.ASC) {
-                sortConditions[sortIndex][1] = OrderDirection.DESC;
+                sorting.push([col, OrderDirection.ASC]);
+            } else if (sorting[sortIndex][1] === OrderDirection.ASC) {
+                sorting[sortIndex][1] = OrderDirection.DESC;
             } else {
-                sortConditions.splice(sortIndex, 1);
+                sorting.splice(sortIndex, 1);
             }
         });
+        this.#parent.clearFormatCache();
         // Trigger data reload with new sort conditions
         this.#callbacks.requestDataLoad();
     };
@@ -120,8 +116,7 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
     // Toggles row selection for the given index
     #toggleRowSelection(index: number): void {
         const isSelected = this.#parent.selectedRows.has(index);
-        log(
-            this.#parent.debug,
+        this.#parent.log(
             LogLevel.INFO,
             `Toggling row selection for index ${index}. New state: ${!isSelected}`
         );
@@ -132,9 +127,7 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
             this.#parent.selectedRows.add(index);
         }
         // Call selection changed hook if defined
-        if (this.#parent.lifecycleHooks.selectionChanged) {
-            this.#parent.lifecycleHooks.selectionChanged(this.#parent.getSelectedRows());
-        }
+        this.#parent.invokeLifecycleHook('selectionChanged', this.#parent.getSelectedRows());
         // Update UI to reflect selection
         this.#renderer.highlightSelectedRows();
         // Announce selection change for accessibility
@@ -147,20 +140,24 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
 
     // Sets up event listeners for column resizing
     #setupColumnResizing(): void {
-        this.#parent.container.addEventListener('mousedown', (e: MouseEvent) => {
-            const target = e.target as HTMLElement;
-            // Check if the target is a resize handle
-            if (target.classList.contains(config.classes.columnResizeHandle)) {
-                const header = target.closest('th');
-                if (header?.dataset.colId) {
-                    this.#startResize(e, header.dataset.colId);
-                }
-            }
-        });
+        this.#parent.container.removeEventListener('mousedown', this.#handleResizeMouseDown);
+        this.#parent.container.addEventListener('mousedown', this.#handleResizeMouseDown);
     }
+
+    #handleResizeMouseDown = (event: MouseEvent): void => {
+        if (this.#parent.isDestroyed) return;
+        const target = event.target as HTMLElement;
+        if (target.classList.contains(config.classes.columnResizeHandle)) {
+            const header = target.closest('th');
+            if (header?.dataset.colId) {
+                this.#startResize(event, header.dataset.colId);
+            }
+        }
+    };
 
     // Handles drag-over events for column dragging
     #handleDragOver = (event: DragEvent): void => {
+        if (this.#parent.isDestroyed) return;
         event.preventDefault();
         const target = (event.target as HTMLElement).closest('th');
         if (target?.dataset.colId) {
@@ -176,6 +173,10 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
     // Sets up event listeners for column dragging if enabled
     #setupColumnDragging(): void {
         if (!this.#parent.draggableColumns) return;
+        this.#parent.container.removeEventListener('dragstart', this.#handleDragStart);
+        this.#parent.container.removeEventListener('dragover', this.#handleDragOver);
+        this.#parent.container.removeEventListener('drop', this.#handleDrop);
+        this.#parent.container.removeEventListener('dragend', this.#handleDragEnd);
         this.#parent.container.addEventListener('dragstart', this.#handleDragStart);
         this.#parent.container.addEventListener('dragover', this.#handleDragOver);
         this.#parent.container.addEventListener('drop', this.#handleDrop);
@@ -197,13 +198,16 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
         event.preventDefault();
         this.#resizingColumnId = columnId;
         const header = this.#renderer.tableHeader!.querySelector<HTMLElement>(
-            `th[data-col-id="${columnId}"]`
+            `th[data-col-id="${escapeAttributeValue(columnId)}"]`
         );
-        if (!header) return;
+        if (!header) {
+            this.#resizingColumnId = null;
+            return;
+        }
         // Store initial position and width
         this.#startX = event.clientX;
         this.#startWidth = header.offsetWidth;
-        log(this.#parent.debug, LogLevel.INFO, `Starting column resize for: ${columnId}`);
+        this.#parent.log(LogLevel.INFO, `Starting column resize for: ${columnId}`);
         // Add document-level handlers for resizing
         document.addEventListener('mousemove', this.#handleResize);
         document.addEventListener('mouseup', this.#stopResize);
@@ -211,27 +215,33 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
 
     // Handles keyboard navigation events
     #handleKeyDown = (event: KeyboardEvent): void => {
+        if (this.#parent.isDestroyed) return;
+        if (
+            event.target instanceof HTMLElement &&
+            event.target.closest(
+                'input, textarea, select, button, a, [contenteditable]:not([contenteditable="false"])'
+            )
+        ) {
+            return;
+        }
         // Define page navigation actions
         const pageActions: { [key: string]: () => void } = {
             PageUp: () => {
                 if (this.#parent.state.currentPage > 1)
-                    this.#parent.gotoPage(this.#parent.state.currentPage - 1);
+                    this.#parent.setCurrentPage(this.#parent.state.currentPage - 1);
             },
             PageDown: () => {
-                const totalPages = Math.ceil(
-                    this.#parent.state.totalRecords / this.#parent.state.rowsPerPage
+                const totalPages = Math.max(
+                    1,
+                    Math.ceil(this.#parent.state.totalRecords / this.#parent.state.rowsPerPage)
                 );
                 if (this.#parent.state.currentPage < totalPages)
-                    this.#parent.gotoPage(this.#parent.state.currentPage + 1);
+                    this.#parent.setCurrentPage(this.#parent.state.currentPage + 1);
             },
         };
         const pageAction = pageActions[event.key];
         if (pageAction) {
-            log(
-                this.#parent.debug,
-                LogLevel.INFO,
-                `Keyboard navigation action detected: ${event.key}`
-            );
+            this.#parent.log(LogLevel.INFO, `Keyboard navigation action detected: ${event.key}`);
             event.preventDefault();
             pageAction();
             return;
@@ -241,9 +251,13 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
         const selectionActions: { [key: string]: () => void } = {
             ArrowDown: () => this.#renderer.navigateToNextRow(),
             ArrowUp: () => this.#renderer.navigateToPrevRow(),
-            Home: () => this.#parent.reset(),
+            Home: () => {
+                this.#parent.currentRowIndex = this.#parent.state.data.length > 0 ? 0 : -1;
+                this.#renderer.highlightCurrentRow();
+            },
             End: () => {
-                this.#parent.currentRowIndex = this.#parent.state.data.length - 1;
+                this.#parent.currentRowIndex =
+                    this.#parent.state.data.length > 0 ? this.#parent.state.data.length - 1 : -1;
                 this.#renderer.highlightCurrentRow();
             },
             Enter: () => {
@@ -257,11 +271,7 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
         };
         const selectionAction = selectionActions[event.key];
         if (selectionAction) {
-            log(
-                this.#parent.debug,
-                LogLevel.INFO,
-                `Keyboard selection action detected: ${event.key}`
-            );
+            this.#parent.log(LogLevel.INFO, `Keyboard selection action detected: ${event.key}`);
             event.preventDefault();
             selectionAction();
         }
@@ -269,14 +279,13 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
 
     // Handles column resizing during mouse movement
     #handleResize = (event: MouseEvent): void => {
-        if (this.#resizingColumnId === null) return;
+        if (this.#parent.isDestroyed || this.#resizingColumnId === null) return;
         // Calculate new width based on mouse movement
-        const width = this.#startWidth + (event.clientX - this.#startX);
-        log(
-            this.#parent.debug,
-            LogLevel.LOG,
-            `Column resizing: ${this.#resizingColumnId} to ${width}px.`
+        const width = Math.max(
+            config.constants.minColumnWidth,
+            this.#startWidth + (event.clientX - this.#startX)
         );
+        this.#parent.log(LogLevel.LOG, `Column resizing: ${this.#resizingColumnId} to ${width}px.`);
         this.#parent.stateManager.setState((draft) => {
             (draft.columnWidths as Map<string, number>).set(this.#resizingColumnId!, width);
         });
@@ -287,11 +296,13 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
     // Stops column resizing
     #stopResize = (): void => {
         if (this.#resizingColumnId === null) return;
-        log(
-            this.#parent.debug,
-            LogLevel.INFO,
-            `Finished column resize for: ${this.#resizingColumnId}`
-        );
+        if (this.#parent.isDestroyed) {
+            this.#resizingColumnId = null;
+            document.removeEventListener('mousemove', this.#handleResize);
+            document.removeEventListener('mouseup', this.#stopResize);
+            return;
+        }
+        this.#parent.log(LogLevel.INFO, `Finished column resize for: ${this.#resizingColumnId}`);
         this.#resizingColumnId = null;
         // Remove document-level resize handlers
         document.removeEventListener('mousemove', this.#handleResize);
@@ -302,12 +313,18 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
 
     // Handles the start of a column drag
     #handleDragStart = (event: DragEvent): void => {
-        const target = (event.target as HTMLElement).closest('th');
+        if (this.#parent.isDestroyed) return;
+        const origin = event.target as HTMLElement;
+        if (origin.closest(`.${config.classes.columnResizeHandle}`)) {
+            event.preventDefault();
+            return;
+        }
+        const target = origin.closest('th');
         if (!target?.dataset.colId || !target.draggable) {
             event.preventDefault();
             return;
         }
-        log(this.#parent.debug, LogLevel.INFO, `Drag started for column: ${target.dataset.colId}`);
+        this.#parent.log(LogLevel.INFO, `Drag started for column: ${target.dataset.colId}`);
         if (event.dataTransfer) {
             // Set drag data
             event.dataTransfer.setData('text/plain', target.dataset.colId);
@@ -319,8 +336,9 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
 
     // Handles the end of a column drag
     #handleDragEnd = (event: DragEvent): void => {
+        if (this.#parent.isDestroyed) return;
         const target = (event.target as HTMLElement).closest('th');
-        log(this.#parent.debug, LogLevel.INFO, `Drag ended for column: ${target?.dataset.colId}`);
+        this.#parent.log(LogLevel.INFO, `Drag ended for column: ${target?.dataset.colId}`);
         // Remove dragging and drag-over classes
         this.#renderer.tableHeader?.querySelectorAll('th').forEach((th) => {
             th.classList.remove(config.classes.dragging);
@@ -330,13 +348,14 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
 
     // Handles delegated click events
     #handleDelegatedClick = (event: MouseEvent): void => {
+        if (this.#parent.isDestroyed) return;
         const target = event.target as HTMLElement;
 
         // Handle sort link clicks
-        const sortLink = target.closest<HTMLAnchorElement>('th a[role="button"]');
-        if (sortLink) {
+        const sortButton = target.closest<HTMLButtonElement>('th button');
+        if (sortButton) {
             event.preventDefault();
-            const th = sortLink.closest('th');
+            const th = sortButton.closest('th');
             if (th?.dataset.colId) {
                 this.#handleSortClick(th.dataset.colId);
             }
@@ -344,54 +363,46 @@ export class EventManager<T extends Identifiable & Record<string, unknown>>
         }
 
         // Handle pagination button clicks
-        const pageButton = target.closest<HTMLButtonElement>('.snap-pagination-container button');
+        const pageButton = target.closest<HTMLButtonElement>(
+            `.${config.classes.paginationContainer} button`
+        );
         if (pageButton) {
             event.preventDefault();
             if (pageButton.disabled) return;
 
-            const pageNumText = pageButton.textContent?.trim();
-            const pageNum = pageNumText ? parseInt(pageNumText, 10) : NaN;
+            const pageNum = parseInt(pageButton.dataset.page ?? '', 10);
+            if (Number.isNaN(pageNum)) return;
 
-            log(this.#parent.debug, LogLevel.INFO, 'Pagination button clicked.', {
-                text: pageNumText,
+            this.#parent.log(LogLevel.INFO, 'Pagination button clicked.', {
+                page: pageNum,
             });
-
-            if (pageButton.classList.contains(config.pagination.prevButton.classNames.base)) {
-                this.#parent.gotoPage(this.#parent.state.currentPage - 1);
-            } else if (
-                pageButton.classList.contains(config.pagination.nextButton.classNames.base)
-            ) {
-                this.#parent.gotoPage(this.#parent.state.currentPage + 1);
-            } else if (!isNaN(pageNum)) {
-                this.#parent.gotoPage(pageNum);
-            }
+            this.#parent.setCurrentPage(pageNum);
             return;
         }
 
-        // Handle row selection clicks
+        // Handle row selection clicks, ignoring interactive cell content
         const selectableRow = target.closest<HTMLElement>('[data-index]');
         if (this.#parent.selectable && selectableRow?.dataset.index) {
+            if (target.closest('a, button, input, select, textarea, label, [data-snap-ignore]')) {
+                return;
+            }
             const index = parseInt(selectableRow.dataset.index, 10);
             if (!isNaN(index)) {
                 this.#toggleRowSelection(index);
                 selectableRow.focus();
             }
-            return;
         }
     };
 
     // Handles column drop events
     #handleDrop = (event: DragEvent): void => {
+        if (this.#parent.isDestroyed) return;
         event.preventDefault();
         const target = (event.target as HTMLElement).closest('th');
         const sourceColId = event.dataTransfer?.getData('text/plain');
         const targetColId = target?.dataset.colId;
         if (sourceColId && targetColId && sourceColId !== targetColId) {
-            log(
-                this.#parent.debug,
-                LogLevel.INFO,
-                `Column drop: "${sourceColId}" onto "${targetColId}"`
-            );
+            this.#parent.log(LogLevel.INFO, `Column drop: "${sourceColId}" onto "${targetColId}"`);
             // Reorder columns
             this.#callbacks.reorderColumns(sourceColId, targetColId);
         }
