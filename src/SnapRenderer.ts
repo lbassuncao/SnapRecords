@@ -6,10 +6,15 @@ import {
     ISnapRenderer,
     OrderDirection,
 } from './SnapTypes.js';
-import { log } from './utils.js';
 import { config } from './SnapOptions.js';
 import type { SnapRecords } from './SnapRecords.js';
+import { sanitizeHTML, escapeAttributeValue } from './utils.js';
 import defaultTranslations from './lang/en_US.json';
+
+function addClassTokens(el: Element, classNames: string): void {
+    const tokens = classNames.split(/\s+/).filter(Boolean);
+    if (tokens.length) el.classList.add(...tokens);
+}
 
 /*========================================================================================================
 
@@ -28,9 +33,9 @@ import defaultTranslations from './lang/en_US.json';
 
 ==========================================================================================================*/
 
-export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
-    implements ISnapRenderer<T>
-{
+export class SnapRenderer<
+    T extends Identifiable & Record<string, unknown>,
+> implements ISnapRenderer {
     // Container for mobile cards display
     public cardsContainer: HTMLElement | null = null;
     // Main table element for table rendering
@@ -52,6 +57,11 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
     private totalsElement: HTMLElement | null = null;
     // Element containing pagination controls
     private paginationElement: HTMLElement | null = null;
+    #destroyed = false;
+    #announceRegion: HTMLElement | null = null;
+    #announceTimer: number | null = null;
+    #widthFrame: number | null = null;
+    #didSetContainerPosition = false;
 
     // Constructor initializes the renderer with the parent instance and content container
     constructor(parent: SnapRecords<T>, contentContainer: HTMLElement) {
@@ -72,7 +82,7 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
 
     // Navigates to the previous row for keyboard navigation
     public navigateToPrevRow(): void {
-        if (this.parent.state.data.length === 0) return;
+        if (this.parent.state.data.length === 0 || this.parent.currentRowIndex < 0) return;
         // Decrement the current row index, floored at 0
         this.parent.currentRowIndex = Math.max(0, this.parent.currentRowIndex - 1);
         this.highlightCurrentRow();
@@ -80,11 +90,12 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
 
     // Creates the necessary DOM containers for rendering
     public createContainers(): void {
-        log(this.parent.debug, LogLevel.INFO, 'Creating DOM containers for rendering.');
+        this.parent.log(LogLevel.INFO, 'Creating DOM containers for rendering.');
         // Clear the container's content
         this.parent.container.innerHTML = '';
         // Add table container class
         this.parent.container.classList.add(config.classes.tableContainer);
+        this.parent.container.classList.toggle(config.classes.selectable, this.parent.selectable);
         // Add content container class
         this.contentContainer.classList.add(config.classes.contentContainer);
         // Append content container to the main container
@@ -95,16 +106,29 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
         this.parent.errorContainer.style.display = 'none';
         this.parent.container.appendChild(this.parent.errorContainer);
         // Ensure the container has a non-static position for overlays
-        if (getComputedStyle(this.parent.container).position === 'static') {
+        const position = getComputedStyle(this.parent.container).position;
+        if (!position || position === 'static') {
             this.parent.container.style.position = 'relative';
+            this.#didSetContainerPosition = true;
         }
     }
 
     // Shows a loading indicator during data fetching
     public showLoading(): void {
-        if (this.parent.isLoading) return;
+        if (this.parent.isDestroyed) return;
+        const overlays = this.parent.container.querySelectorAll(
+            `.${config.classes.loadingOverlay}`
+        );
+        if (this.parent.isLoading) {
+            if (overlays.length > 0) return;
+            this.parent.isLoading = false;
+        }
         this.parent.isLoading = true;
-        log(this.parent.debug, LogLevel.INFO, 'Showing loading indicator.');
+        this.parent.log(LogLevel.INFO, 'Showing loading indicator.');
+        this.contentContainer.style.display = '';
+        if (this.parent.errorContainer) {
+            this.parent.errorContainer.style.display = 'none';
+        }
 
         // Get translations, falling back to default
         const translations = this.parent.state.translations ?? defaultTranslations;
@@ -140,56 +164,55 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
 
     // Applies the current theme class to the container
     public applyThemeClass(): void {
-        log(this.parent.debug, LogLevel.INFO, `Applying theme: ${this.parent.state.theme}`);
-        // ### CORRECTION HERE ###
-        // Remove all possible existing theme classes before adding the new one.
+        const theme = this.parent.state.theme;
+        this.parent.log(LogLevel.INFO, `Applying theme: ${theme}`);
         this.parent.container.classList.remove('theme-light', 'theme-dark', 'theme-default');
-        // Add the current theme class
-        this.parent.container.classList.add(`theme-${this.parent.state.theme}`);
+        if (theme !== 'light' && theme !== 'dark' && theme !== 'default') return;
+        this.parent.container.classList.add(`theme-${theme}`);
     }
 
     // Hides the loading indicator
     public hideLoading(): void {
-        if (!this.parent.isLoading) return;
-        log(this.parent.debug, LogLevel.INFO, 'Hiding loading indicator.');
-        // Remove the loading overlay
-        this.parent.container.querySelector(`.${config.classes.loadingOverlay}`)?.remove();
+        const overlays = this.parent.container.querySelectorAll(
+            `.${config.classes.loadingOverlay}`
+        );
+        if (!this.parent.isLoading && overlays.length === 0) return;
+        this.parent.log(LogLevel.INFO, 'Hiding loading indicator.');
+        overlays.forEach((el) => el.remove());
         this.parent.isLoading = false;
     }
 
     // Displays an error message in the error container
     public showError(message: string): void {
-        log(this.parent.debug, LogLevel.ERROR, 'Displaying error message to user:', message);
-        if (this.parent.errorContainer && this.parent.state.translations) {
-            const translations = this.parent.state.translations;
-            this.parent.errorContainer.innerHTML = '';
-            // Create error title
-            const title = document.createElement('strong');
-            title.textContent = translations.errorTitle;
-            // Create error message
-            const text = document.createElement('p');
-            text.textContent = message;
-            // Create retry button
-            const retryButton = document.createElement('button');
-            retryButton.className = 'snap-retry-button';
-            retryButton.textContent = translations.retry;
-            retryButton.addEventListener('click', () => this.parent.refresh());
-            // Append elements to error container
-            this.parent.errorContainer.append(title, text, retryButton);
-            this.parent.errorContainer.style.display = 'block';
-            this.contentContainer.style.display = 'none';
-        }
+        this.parent.log(LogLevel.ERROR, 'Displaying error message to user:', message);
+        if (!this.parent.errorContainer) return;
+        const translations = this.parent.state.translations ?? defaultTranslations;
+        this.parent.errorContainer.innerHTML = '';
+        const title = document.createElement('strong');
+        title.textContent = translations.errorTitle;
+        const text = document.createElement('p');
+        text.textContent = message;
+        const retryButton = document.createElement('button');
+        retryButton.type = 'button';
+        retryButton.className = 'snap-retry-button';
+        retryButton.textContent = translations.retry;
+        retryButton.addEventListener('click', () => this.parent.refresh());
+        this.parent.errorContainer.append(title, text, retryButton);
+        this.parent.errorContainer.style.display = 'block';
+        this.contentContainer.style.display = 'none';
     }
 
     // Applies column widths to table headers
     public applyColumnWidths(): void {
-        // Use requestAnimationFrame for smooth rendering
-        requestAnimationFrame(() => {
-            this.parent.state.columns.forEach((col, index) => {
+        if (this.#widthFrame !== null) cancelAnimationFrame(this.#widthFrame);
+        this.#widthFrame = requestAnimationFrame(() => {
+            this.#widthFrame = null;
+            if (this.#destroyed) return;
+            this.parent.state.columns.forEach((col) => {
                 const width = this.parent.state.columnWidths.get(col as string);
                 if (width) {
                     const header = this.tableHeader?.querySelector<HTMLElement>(
-                        `th:nth-child(${index + 1})`
+                        `th[data-col-id="${escapeAttributeValue(col)}"]`
                     );
                     if (header) header.style.width = `${width}px`;
                 }
@@ -199,6 +222,7 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
 
     // Highlights selected rows in the UI
     public highlightSelectedRows(): void {
+        if (this.#destroyed) return;
         const selector = 'tr[data-index], li[data-index], .snap-mobile-card[data-index]';
         this.contentContainer.querySelectorAll(selector).forEach((el: Element) => {
             const element = el as HTMLElement;
@@ -206,13 +230,15 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
             const isSelected = this.parent.selectedRows.has(index);
             // Toggle the selected class
             element.classList.toggle(config.classes.selected, isSelected);
-            // Update ARIA attribute
-            element.setAttribute('aria-selected', String(isSelected));
+            if (element.getAttribute('role') === 'row') {
+                element.setAttribute('aria-selected', String(isSelected));
+            }
         });
     }
 
     // Highlights the current row for keyboard navigation
     public highlightCurrentRow(): void {
+        if (this.#destroyed) return;
         const selector = 'tr[data-index], li[data-index], .snap-mobile-card[data-index]';
         this.contentContainer.querySelectorAll(selector).forEach((el: Element) => {
             const element = el as HTMLElement;
@@ -230,10 +256,14 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
 
     // Main rendering method based on the current state
     public render(): void {
-        if (!this.parent.state.translations) return;
-        log(this.parent.debug, LogLevel.INFO, 'Starting render process...');
-        // Call pre-render hook if defined
-        if (this.parent.lifecycleHooks.preRender) this.parent.lifecycleHooks.preRender();
+        if (this.#destroyed || !this.parent.state.translations) return;
+        this.parent.log(LogLevel.INFO, 'Starting render process...');
+        this.contentContainer.style.display = '';
+        if (this.parent.errorContainer) {
+            this.parent.errorContainer.style.display = 'none';
+            this.parent.errorContainer.innerHTML = '';
+        }
+        this.parent.invokeLifecycleHook('preRender');
 
         // Ensure the correct container is set up
         this.#ensureCorrectContainer(this.parent.state.format);
@@ -251,32 +281,63 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
         // Update footer with pagination and totals
         this.#updateFooter();
 
+        this.highlightSelectedRows();
+        if (this.parent.currentRowIndex >= 0) this.highlightCurrentRow();
+
+        if (this.parent.isLoading) {
+            this.showLoading();
+        }
+
         // Call post-render hook if defined
-        if (this.parent.lifecycleHooks.postRender) this.parent.lifecycleHooks.postRender();
-        log(this.parent.debug, LogLevel.INFO, 'Render process finished.');
+        this.parent.invokeLifecycleHook('postRender');
+        this.parent.log(LogLevel.INFO, 'Render process finished.');
     }
 
     // Announces updates for screen readers
     public announceScreenReaderUpdate(message: string): void {
-        // Create a live region for accessibility
+        if (this.#destroyed) return;
+        this.#announceRegion?.remove();
+        if (this.#announceTimer !== null) {
+            clearTimeout(this.#announceTimer);
+            this.#announceTimer = null;
+        }
         const liveRegion = document.createElement('div');
         liveRegion.setAttribute('aria-live', 'polite');
         liveRegion.style.cssText =
             'position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);';
         liveRegion.textContent = message;
         document.body.appendChild(liveRegion);
-        // Remove the live region after a delay
-        setTimeout(() => liveRegion.remove(), 1000);
+        this.#announceRegion = liveRegion;
+        this.#announceTimer = window.setTimeout(() => {
+            this.#announceTimer = null;
+            this.#announceRegion = null;
+            liveRegion.remove();
+        }, config.constants.screenReaderAnnouncementDelay);
     }
 
-    // Cleans up the renderer by clearing the container
     public destroy(): void {
-        log(this.parent.debug, LogLevel.INFO, 'Destroying renderer and clearing container HTML.');
+        this.#destroyed = true;
+        if (this.#announceTimer !== null) {
+            clearTimeout(this.#announceTimer);
+            this.#announceTimer = null;
+        }
+        this.#announceRegion?.remove();
+        this.#announceRegion = null;
+        if (this.#widthFrame !== null) {
+            cancelAnimationFrame(this.#widthFrame);
+            this.#widthFrame = null;
+        }
+        this.parent.log(LogLevel.INFO, 'Destroying renderer and clearing container HTML.');
         this.parent.container.innerHTML = '';
+        if (this.#didSetContainerPosition) {
+            this.parent.container.style.position = '';
+            this.#didSetContainerPosition = false;
+        }
     }
 
     // Creates a footer for non-table rendering modes
     #renderNonTableFooter(): void {
+        if (this.footerElement) return;
         this.footerElement = document.createElement('div');
         this.footerElement.classList.add(config.classes.footer);
         this.contentContainer.appendChild(this.footerElement);
@@ -288,65 +349,171 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
         this.#reconcileItems(
             this.tableBody,
             this.parent.state.data,
-            (row, index) => this.parent.createTableRow(row, index, row.id),
-            (el, row, index) => this.parent.updateRow(el, row, index)
+            (row, index) => this.#createTableRow(row, index),
+            (el, row, index) => this.#updateRow(el, row, index)
         );
     }
 
-    // Refreshes the list body with current data
     #refreshListBody(): void {
         if (!this.listContainer) return;
         this.#reconcileItems(
             this.listContainer,
             this.parent.state.data,
-            (row, index) => this.parent.createListItem(row, index),
-            (el, row, index) => this.parent.updateListItem(el, row, index)
+            (row, index) => this.#createListItem(row, index),
+            (el, row, index) => this.#updateListItem(el, row, index)
         );
     }
 
-    // Refreshes mobile cards with current data
     #refreshMobileCards(): void {
         if (!this.cardsContainer) return;
         this.#reconcileItems(
             this.cardsContainer,
             this.parent.state.data,
-            (row, index) => this.parent.createMobileCard(row, index),
-            (el, row, index) => this.parent.updateMobileCard(el, row, index)
+            (row, index) => this.#createMobileCard(row, index),
+            (el, row, index) => this.#updateMobileCard(el, row, index)
         );
     }
 
-    // Creates a pagination button
+    #createTableRow(row: T, index: number): HTMLTableRowElement {
+        const tr = document.createElement('tr');
+        tr.setAttribute('role', 'row');
+        this.#updateRow(tr, row, index);
+        return tr;
+    }
+
+    #updateRow(tr: HTMLTableRowElement, row: T, index: number): void {
+        tr.setAttribute('data-index', index.toString());
+        if (this.parent.selectable) tr.tabIndex = 0;
+        const fragment = document.createDocumentFragment();
+        this.parent.state.columns.forEach((col) => {
+            const td = document.createElement('td');
+            td.setAttribute('role', 'gridcell');
+            td.setAttribute('data-col-id', col);
+            const formattedValue = this.parent.getFormattedValue(
+                row[col as keyof T],
+                col,
+                row,
+                index
+            );
+            td.innerHTML = formattedValue;
+            fragment.appendChild(td);
+        });
+        tr.replaceChildren(fragment);
+    }
+
+    #createListItem(row: T, index: number): HTMLLIElement {
+        const li = document.createElement('li');
+        addClassTokens(li, config.classes.list.itemClass);
+        li.setAttribute('role', 'listitem');
+        this.#updateListItem(li, row, index);
+        return li;
+    }
+
+    #updateListItem(li: HTMLLIElement, row: T, index: number): void {
+        li.setAttribute('data-index', index.toString());
+        if (this.parent.selectable) li.tabIndex = 0;
+        li.replaceChildren();
+        this.parent.state.columns.forEach((col, colIndex) => {
+            if (colIndex > 0) li.appendChild(document.createTextNode(' | '));
+            const strong = document.createElement('strong');
+            strong.textContent = `${this.parent.state.columnTitles[colIndex] ?? col}:`;
+            li.appendChild(strong);
+            li.appendChild(document.createTextNode(' '));
+            const value = document.createElement('span');
+            value.innerHTML = this.parent.getFormattedValue(row[col as keyof T], col, row, index);
+            li.appendChild(value);
+        });
+    }
+
+    #createMobileCard(row: T, index: number): HTMLDivElement {
+        const card = document.createElement('div');
+        card.classList.add(config.classes.mobileCard);
+        card.setAttribute('role', 'rowgroup');
+        this.#updateMobileCard(card, row, index);
+        return card;
+    }
+
+    #updateMobileCard(div: HTMLDivElement, row: T, index: number): void {
+        div.setAttribute('data-index', index.toString());
+        if (this.parent.selectable) div.tabIndex = 0;
+        div.replaceChildren();
+        this.parent.state.columns.forEach((col, colIndex) => {
+            const cardRow = document.createElement('div');
+            cardRow.classList.add(config.classes.cardRow);
+            cardRow.setAttribute('role', 'row');
+
+            const label = document.createElement('span');
+            label.classList.add(config.classes.cardLabel);
+            label.setAttribute('role', 'columnheader');
+            label.textContent = `${this.parent.state.columnTitles[colIndex] ?? col}:`;
+
+            const value = document.createElement('span');
+            value.classList.add(config.classes.cardValue);
+            value.setAttribute('role', 'cell');
+            value.innerHTML = this.parent.getFormattedValue(row[col as keyof T], col, row, index);
+
+            cardRow.append(label, value);
+            div.appendChild(cardRow);
+        });
+    }
+
     #createPaginationButton(
         content: string,
-        disabled: boolean,
-        type: ButtonType
+        type: ButtonType,
+        options: { disabled?: boolean; active?: boolean; page?: number | string } = {}
     ): HTMLButtonElement {
         const button = document.createElement('button');
         button.type = 'button';
-        button.disabled = disabled;
+        button.disabled = Boolean(options.disabled);
 
-        // Apply appropriate classes based on button type
-        let typeConfig: { classNames: { base: string; disabled: string } };
-        switch (type) {
-            case 'prev':
-                typeConfig = config.pagination.prevButton;
-                button.classList.add(typeConfig.classNames.base);
-                break;
-            case 'next':
-                typeConfig = config.pagination.nextButton;
-                button.classList.add(typeConfig.classNames.base);
-                break;
-            case 'number':
-                typeConfig = config.pagination.numberButton;
-                button.classList.add(typeConfig.classNames.base);
-                break;
+        const typeConfig =
+            type === 'prev'
+                ? this.parent.prevButtonConfig
+                : type === 'next'
+                  ? this.parent.nextButtonConfig
+                  : config.pagination.numberButton;
+
+        const classNames = typeConfig.classNames as {
+            base: string;
+            disabled?: string;
+            active?: string;
+        };
+
+        button.classList.add(classNames.base);
+        if (options.disabled && classNames.disabled) {
+            button.classList.add(classNames.disabled);
+        }
+        if (options.active && classNames.active) {
+            button.classList.add(classNames.active);
+        }
+        if (options.active) {
+            button.setAttribute('aria-current', 'page');
+        }
+        if (options.page !== undefined) {
+            button.dataset.page = String(options.page);
         }
 
-        if (disabled) {
-            button.classList.add(typeConfig.classNames.disabled);
+        const buttonOptions =
+            type === 'prev'
+                ? this.parent.prevButtonConfig
+                : type === 'next'
+                  ? this.parent.nextButtonConfig
+                  : undefined;
+        const rendered =
+            buttonOptions?.template && options.page !== undefined
+                ? buttonOptions.template(options.page)
+                : content;
+        const isHtml = Boolean(buttonOptions?.isHtml);
+        if (type !== 'number' && isHtml) {
+            button.innerHTML = sanitizeHTML(rendered);
+        } else {
+            button.textContent = rendered;
         }
-
-        button.innerHTML = content;
+        if (type === 'prev') {
+            button.setAttribute('aria-label', this.parent.state.translations!.previous);
+        } else if (type === 'next') {
+            button.setAttribute('aria-label', this.parent.state.translations!.next);
+        }
         return button;
     }
 
@@ -366,18 +533,19 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
         // Create a document fragment for efficient DOM updates
         const fragment = document.createDocumentFragment();
         data.forEach((item, index) => {
-            const key = item.id.toString();
+            const key = `${item.id}:${index}`;
             const existingEl = domMap.get(key);
             let elToAppend: K;
 
             if (existingEl) {
-                // Update existing element
                 updateFn(existingEl, item, index);
                 elToAppend = existingEl;
-                domMap.delete(key);
+                elToAppend.setAttribute('data-key', key);
+                domMap.delete(existingEl.dataset.key!);
             } else {
                 // Create new element
                 elToAppend = renderer(item, index);
+                elToAppend.setAttribute('data-key', key);
             }
             fragment.appendChild(elToAppend);
         });
@@ -397,10 +565,10 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
 
     // Renders a "no data available" message
     #renderNoDataMessage(container: HTMLElement, colSpan: number): void {
-        log(this.parent.debug, LogLevel.INFO, 'Rendering "no data available" message.');
+        this.parent.log(LogLevel.INFO, 'Rendering "no data available" message.');
         const isTable = container.tagName === 'TBODY';
-        // Create appropriate element (tr for table, li for list)
-        const noDataEl = document.createElement(isTable ? 'tr' : 'li');
+        const isList = container.tagName === 'UL';
+        const noDataEl = document.createElement(isTable ? 'tr' : isList ? 'li' : 'div');
         const contentEl = document.createElement(isTable ? 'td' : 'div');
         if (isTable) (contentEl as HTMLTableCellElement).colSpan = colSpan;
         contentEl.classList.add(config.classes.noData);
@@ -411,9 +579,16 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
 
     // Updates the footer with totals and pagination
     #updateFooter(): void {
+        if (this.tableElement) {
+            const footerCell = this.tableElement.querySelector<HTMLTableCellElement>('tfoot td');
+            if (footerCell) {
+                footerCell.colSpan = this.parent.state.columns.length;
+            }
+        }
         const footerTarget =
-            this.tableElement?.querySelector(`.${config.classes.footerContainer}`) ??
-            this.footerElement;
+            this.parent.state.format === RenderType.TABLE
+                ? this.tableElement?.querySelector(`.${config.classes.footerContainer}`)
+                : this.footerElement;
         if (!footerTarget || !this.parent.state.translations) return;
 
         footerTarget.innerHTML = '';
@@ -425,28 +600,28 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
 
     // Creates the table structure for table rendering mode
     #renderTableStructure(): void {
-        log(this.parent.debug, LogLevel.LOG, 'Rendering main table structure.');
+        this.parent.log(LogLevel.LOG, 'Rendering main table structure.');
         // Create responsive wrapper
         const responsiveWrapper = document.createElement('div');
         responsiveWrapper.classList.add(config.classes.tableResponsive);
         // Create table element
         this.tableElement = document.createElement('table');
-        this.tableElement.classList.add(...config.classes.table.containerClass.split(' '));
+        addClassTokens(this.tableElement, config.classes.table.containerClass);
         this.tableElement.setAttribute('role', 'grid');
         responsiveWrapper.appendChild(this.tableElement);
         this.contentContainer.appendChild(responsiveWrapper);
 
         // Create table header
         this.tableHeader = this.tableElement.createTHead();
-        this.tableHeader.classList.add(...config.classes.table.headerClass.split(' '));
+        addClassTokens(this.tableHeader, config.classes.table.headerClass);
 
         // Create table body
         this.tableBody = this.tableElement.createTBody();
-        this.tableBody.classList.add(...config.classes.table.bodyClass.split(' '));
+        addClassTokens(this.tableBody, config.classes.table.bodyClass);
 
         // Create table footer
         const tfoot = this.tableElement.createTFoot();
-        tfoot.classList.add(...config.classes.table.footerClass.split(' '));
+        addClassTokens(tfoot, config.classes.table.footerClass);
         const footerRow = tfoot.insertRow();
         const footerCell = footerRow.insertCell();
         footerCell.colSpan = this.parent.state.columns.length;
@@ -457,7 +632,7 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
 
     // Creates the cards structure for mobile cards rendering mode
     #renderCardsStructure(): void {
-        log(this.parent.debug, LogLevel.LOG, 'Rendering main cards structure.');
+        this.parent.log(LogLevel.LOG, 'Rendering main cards structure.');
         this.cardsContainer = document.createElement('div');
         this.cardsContainer.classList.add(config.classes.mobileCardsContainer);
         this.contentContainer.appendChild(this.cardsContainer);
@@ -466,16 +641,17 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
 
     // Creates the list structure for list rendering mode
     #renderListStructure(): void {
-        log(this.parent.debug, LogLevel.LOG, 'Rendering main list structure.');
+        this.parent.log(LogLevel.LOG, 'Rendering main list structure.');
         this.listContainer = document.createElement('ul');
-        this.listContainer.classList.add(...config.classes.list.containerClass.split(' '));
+        addClassTokens(this.listContainer, config.classes.list.containerClass);
         this.contentContainer.appendChild(this.listContainer);
         this.#renderNonTableFooter();
     }
 
     // Renders the table header contents
     #renderTableHeaderContents(): void {
-        if (!this.tableHeader || !this.parent.state.translations) return;
+        const translations = this.parent.state.translations;
+        if (!this.tableHeader || !translations) return;
         this.tableHeader.innerHTML = '';
         const headerRow = this.tableHeader.insertRow();
         headerRow.setAttribute('role', 'row');
@@ -487,47 +663,60 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
             const width = this.parent.state.columnWidths.get(col);
             if (width) th.style.width = `${width}px`;
             // Apply custom header classes
-            if (this.parent.headerCellClasses[idx])
-                th.className = this.parent.headerCellClasses[idx];
+            const title = String(this.parent.state.columnTitles[idx] ?? col);
+            const headerClass = this.parent.state.headerCellClasses[idx];
+            if (headerClass) th.className = headerClass;
 
             // Check if the column is sortable
-            const isSortable = !this.parent.headerCellClasses[idx]?.includes('no-sorting');
+            const isSortable = !headerClass?.split(/\s+/).includes('no-sorting');
             if (isSortable) {
-                const link = document.createElement('a');
-                link.href = '#';
-                link.innerHTML = this.parent.state.columnTitles[idx] as string;
-                link.setAttribute('role', 'button');
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.textContent = title;
 
                 // Apply sorting indicators
-                const sortItem = this.parent.state.sortConditions.find((item) => item[0] === col);
+                const sortItem = this.parent.state.sorting.find((item) => item[0] === col);
                 if (sortItem) {
                     const sortClass =
                         sortItem[1] === OrderDirection.ASC
                             ? config.classes.sortAscOrder
                             : config.classes.sortDescOrder;
-                    link.classList.add(sortClass);
-                    link.setAttribute(
+                    button.classList.add(sortClass);
+                    th.setAttribute(
                         'aria-sort',
-                        sortItem[1] === 'ASC' ? 'ascending' : 'descending'
+                        sortItem[1] === OrderDirection.ASC ? 'ascending' : 'descending'
+                    );
+                    button.setAttribute(
+                        'aria-label',
+                        `${title}: ${
+                            sortItem[1] === OrderDirection.ASC
+                                ? translations.sortDescending
+                                : translations.removeSort
+                        }`
                     );
                 } else {
-                    link.classList.add(config.classes.sortNoOrder);
-                    link.setAttribute('aria-sort', 'none');
+                    button.classList.add(config.classes.sortNoOrder);
+                    th.setAttribute('aria-sort', 'none');
+                    button.setAttribute('aria-label', `${title}: ${translations.sortAscending}`);
                 }
-                th.appendChild(link);
+                th.appendChild(button);
             } else {
-                th.textContent = this.parent.state.columnTitles[idx] as string;
+                th.textContent = title;
             }
 
             // Enable dragging if configured
             if (this.parent.draggableColumns) {
                 th.setAttribute('draggable', 'true');
                 th.classList.add(config.classes.draggableColumn);
+                th.title = translations.dragColumn.replace('{col}', title);
             }
 
             // Add resize handle
             const resizeHandle = document.createElement('div');
             resizeHandle.className = config.classes.columnResizeHandle;
+            resizeHandle.setAttribute('role', 'separator');
+            resizeHandle.setAttribute('aria-orientation', 'vertical');
+            resizeHandle.setAttribute('aria-label', translations.columnResizeHandle);
             th.appendChild(resizeHandle);
             headerRow.appendChild(th);
         });
@@ -536,76 +725,76 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
     // Creates the pagination element
     #createPaginationElement(): HTMLElement {
         const parentState = this.parent.state;
-        // Calculate total pages
-        const totalPages = Math.max(
-            1,
-            Math.ceil(parentState.totalRecords / parentState.rowsPerPage)
-        );
+        const rpp = Math.max(1, parentState.rowsPerPage || 1);
+        const totalPages = Math.max(1, Math.ceil(parentState.totalRecords / rpp) || 1);
         const paginationContainer = document.createElement('nav');
         paginationContainer.classList.add(config.classes.paginationContainer);
         paginationContainer.setAttribute('aria-label', parentState.translations!.pageNavigation);
 
-        // Add previous button
         paginationContainer.appendChild(
             this.#createPaginationButton(
                 this.parent.prevButtonConfig.text || parentState.translations!.previous,
-                parentState.currentPage === 1,
-                'prev'
+                'prev',
+                {
+                    disabled: parentState.currentPage === 1,
+                    page: Math.max(1, parentState.currentPage - 1),
+                }
             )
         );
 
-        // Add first page button if needed
-        if (parentState.currentPage > config.constants.paginationMaxPageDistance) {
-            paginationContainer.appendChild(this.#createPaginationButton('1', false, 'number'));
-            if (parentState.currentPage > config.constants.paginationEllipsisDistance) {
-                // Add ellipsis
-                const ellipsis = document.createElement('span');
-                ellipsis.textContent = '...';
-                ellipsis.setAttribute('aria-hidden', 'true');
-                ellipsis.classList.add(config.pagination.ellipsis.classNames.base);
-                paginationContainer.appendChild(ellipsis);
-            }
+        const range = config.constants.paginationPageRange;
+        const startPage = Math.max(1, parentState.currentPage - range);
+        const endPage = Math.min(totalPages, parentState.currentPage + range);
+
+        if (startPage > 1) {
+            paginationContainer.appendChild(
+                this.#createPaginationButton('1', 'number', {
+                    active: parentState.currentPage === 1,
+                    page: 1,
+                })
+            );
+            if (startPage > 2) this.#appendPaginationEllipsis(paginationContainer);
         }
 
-        // Add page number buttons
-        const startPage = Math.max(
-            1,
-            parentState.currentPage - config.constants.paginationPageRange
-        );
-        const endPage = Math.min(
-            totalPages,
-            parentState.currentPage + config.constants.paginationPageRange
-        );
         for (let i = startPage; i <= endPage; i++) {
             paginationContainer.appendChild(
-                this.#createPaginationButton(i.toString(), i === parentState.currentPage, 'number')
+                this.#createPaginationButton(i.toString(), 'number', {
+                    active: i === parentState.currentPage,
+                    page: i,
+                })
             );
         }
 
-        // Add last page button and ellipsis if needed
-        if (endPage < totalPages - config.constants.paginationLastPageBuffer) {
-            if (endPage < totalPages - config.constants.paginationEllipsisLastPageBuffer) {
-                const ellipsis = document.createElement('span');
-                ellipsis.textContent = '...';
-                ellipsis.setAttribute('aria-hidden', 'true');
-                ellipsis.classList.add(config.pagination.ellipsis.classNames.base);
-                paginationContainer.appendChild(ellipsis);
-            }
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) this.#appendPaginationEllipsis(paginationContainer);
             paginationContainer.appendChild(
-                this.#createPaginationButton(totalPages.toString(), false, 'number')
+                this.#createPaginationButton(totalPages.toString(), 'number', {
+                    active: parentState.currentPage === totalPages,
+                    page: totalPages,
+                })
             );
         }
 
-        // Add next button
         paginationContainer.appendChild(
             this.#createPaginationButton(
                 this.parent.nextButtonConfig.text || parentState.translations!.next,
-                parentState.currentPage === totalPages,
-                'next'
+                'next',
+                {
+                    disabled: parentState.currentPage === totalPages,
+                    page: Math.min(totalPages, parentState.currentPage + 1),
+                }
             )
         );
 
         return paginationContainer;
+    }
+
+    #appendPaginationEllipsis(container: HTMLElement): void {
+        const ellipsis = document.createElement('span');
+        ellipsis.textContent = '...';
+        ellipsis.setAttribute('aria-hidden', 'true');
+        ellipsis.classList.add(config.pagination.ellipsis.classNames.base);
+        container.appendChild(ellipsis);
     }
 
     // Creates the totals element showing record range
@@ -623,24 +812,35 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
             parentState.currentPage * parentState.rowsPerPage,
             parentState.totalRecords
         );
-        // Format the totals text
-        const translationKey = parentState
-            .translations!.pagination.showingRecords.replace(
-                '{start}',
-                `<span class="${config.classes.recordStart}">${startRecord}</span>`
-            )
-            .replace('{end}', `<span class="${config.classes.recordEnd}">${endRecord}</span>`)
-            .replace(
-                '{total}',
-                `<span class="${config.classes.recordsTotal}">${parentState.totalRecords}</span>`
-            );
-        totalsDiv.innerHTML = translationKey;
+        const showingRecords =
+            typeof parentState.translations!.pagination.showingRecords === 'string'
+                ? parentState.translations!.pagination.showingRecords
+                : defaultTranslations.pagination.showingRecords;
+        const placeholders: Record<string, { className: string; value: string }> = {
+            '{start}': { className: config.classes.recordStart, value: String(startRecord) },
+            '{end}': { className: config.classes.recordEnd, value: String(endRecord) },
+            '{total}': {
+                className: config.classes.recordsTotal,
+                value: String(parentState.totalRecords),
+            },
+        };
+        showingRecords.split(/(\{start\}|\{end\}|\{total\})/).forEach((part) => {
+            const token = placeholders[part];
+            if (token) {
+                const span = document.createElement('span');
+                span.className = token.className;
+                span.textContent = token.value;
+                totalsDiv.appendChild(span);
+            } else if (part) {
+                totalsDiv.appendChild(document.createTextNode(part));
+            }
+        });
         return totalsDiv;
     }
 
     // Ensures the correct container is used for the current rendering mode
     #ensureCorrectContainer(format: RenderType): void {
-        log(this.parent.debug, LogLevel.LOG, `Ensuring correct container for format: ${format}`);
+        this.parent.log(LogLevel.LOG, `Ensuring correct container for format: ${format}`);
         const tableVisible = format === RenderType.TABLE;
         const listVisible = format === RenderType.LIST;
         const cardsVisible = format === RenderType.MOBILE_CARDS;
@@ -657,11 +857,9 @@ export class SnapRenderer<T extends Identifiable & Record<string, unknown>>
         if (this.cardsContainer) this.cardsContainer.style.display = cardsVisible ? '' : 'none';
 
         // Toggle footer visibility
-        const footerElement =
-            this.tableElement?.querySelector(`.${config.classes.footerContainer}`)?.parentElement ??
-            this.footerElement;
-        if (footerElement)
-            footerElement.style.display = listVisible || cardsVisible || tableVisible ? '' : 'none';
+        if (this.footerElement) {
+            this.footerElement.style.display = listVisible || cardsVisible ? '' : 'none';
+        }
     }
 }
 

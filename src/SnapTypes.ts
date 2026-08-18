@@ -74,8 +74,8 @@ export interface Identifiable {
 export interface PersistedState {
     columns: string[];
     columnWidths: [string, number][];
-    sortConditions: SortCondition[];
-    filters: Record<string, string>;
+    sorting: SortCondition[];
+    filtering: Record<string, string>;
     currentPage: number;
     rowsPerPage: RowsPerPage;
     headerCellClasses: string[];
@@ -141,6 +141,8 @@ export interface Translation {
     dragColumn: string;
     // Label for loading more data
     loadMore: string;
+    // Announcement when rows per page changes
+    rowsPerPageChanged: string;
 }
 
 // Interface for the event manager, handling user interactions
@@ -165,43 +167,26 @@ export class SnapRecordsConfigError extends Error {
 
 // Custom error class for data-related issues
 export class SnapRecordsDataError extends Error {
-    constructor(message: string) {
+    readonly status?: number;
+
+    constructor(message: string, status?: number) {
         super(message);
-        // Set the error name for identification
         this.name = 'SnapRecordsDataError';
+        this.status = status;
     }
 }
 
-// Interface defining the configuration for pagination buttons
-export interface ButtonConfig {
-    // CSS class names for styling
-    classNames: {
-        // Base class for the button
-        base: string;
-        // Class applied when the button is disabled
-        disabled: string;
-    };
-    // Flag indicating if the button content is HTML
-    isHtml: boolean;
-    // Optional template function for custom button content
-    template?: (page: number | string) => string;
-}
+export type SnapTheme = 'light' | 'dark' | 'default';
 
 // Type defining a sort condition as a tuple of column name and direction
 export type SortCondition = [string, OrderDirection];
 
-// Interface for server request parameters
 export interface ServerRequestParams {
-    // Current page number
-    page: number;
-    // Number of records per page
-    perPage: number;
-    // Offset for pagination
+    currentPage: number;
+    rowsPerPage: number;
     offset: number;
-    // Optional filters for data
-    filtering?: Record<string, string>;
-    // Optional sorting conditions
-    sorting?: Record<string, 'ASC' | 'DESC'>;
+    filtering: Record<string, string>;
+    sorting: SortCondition[];
 }
 
 // Type defining callbacks for the event manager
@@ -244,8 +229,7 @@ export interface LifecycleHooks<T extends Identifiable & Record<string, unknown>
 }
 
 // Interface for the renderer, handling UI rendering
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export interface ISnapRenderer<T extends Identifiable & Record<string, unknown>> {
+export interface ISnapRenderer {
     // Table body element
     readonly tableBody: HTMLTableSectionElement | null;
     // List container element
@@ -289,9 +273,8 @@ export interface SnapRecordsState<T extends Identifiable & Record<string, unknow
     // Number of rows per page
     readonly rowsPerPage: number;
     // Applied filters
-    readonly filters: Readonly<Record<string, string>>;
-    // Applied sort conditions
-    readonly sortConditions: ReadonlyArray<SortCondition>;
+    readonly filtering: Readonly<Record<string, string>>;
+    readonly sorting: ReadonlyArray<SortCondition>;
     // List of column names
     readonly columns: ReadonlyArray<string>;
     // List of column titles
@@ -308,8 +291,7 @@ export interface SnapRecordsState<T extends Identifiable & Record<string, unknow
     readonly language: string;
     // Current translations
     readonly translations: Translation | null;
-    // Current theme (light, dark, or default)
-    readonly theme: 'light' | 'dark' | 'default';
+    readonly theme: SnapTheme;
     // CSS classes for header cells
     readonly headerCellClasses: ReadonlyArray<string>;
 }
@@ -342,8 +324,10 @@ export interface SnapRecordsOptions<T extends Identifiable & Record<string, unkn
     selectable?: boolean;
     // Lifecycle hooks for customization
     lifecycleHooks?: LifecycleHooks<T>;
-    // Theme (light, dark, or default)
-    theme?: 'light' | 'dark' | 'default';
+    theme?: SnapTheme;
+    filtering?: Record<string, string>;
+    sorting?: SortCondition[];
+    debounceDelay?: number;
     // Flag to enable draggable columns
     draggableColumns?: boolean;
     // Configuration for the previous page button
@@ -381,7 +365,7 @@ export interface SnapRecordsOptions<T extends Identifiable & Record<string, unkn
     // Optional custom event manager
     eventManager?: (
         parent: SnapRecords<T>,
-        renderer: ISnapRenderer<T>,
+        renderer: ISnapRenderer,
         callbacks: EventManagerCallbacks
     ) => ISnapEventManager;
     // Optional custom state manager
@@ -390,14 +374,15 @@ export interface SnapRecordsOptions<T extends Identifiable & Record<string, unkn
     urlManager?: (parent: SnapRecords<T>) => UrlManager<T>;
     // Optional formatters for custom cell rendering
     columnFormatters?: { [columnKey: string]: (value: unknown, row: T) => string };
-    // Optional custom renderer
-    renderer?: (parent: SnapRecords<T>, container: HTMLElement) => ISnapRenderer<T>;
+    // Custom renderer class or function (factory)
+    renderer?: (parent: SnapRecords<T>, container: HTMLElement) => ISnapRenderer;
     // Optional custom cache manager
     cacheManager?: (parent: SnapRecords<T>, urlManager: UrlManager<T>) => CacheManager<T>;
 }
 
 // Interface for the public API of SnapRecords
 export interface ISnapApi<T extends Identifiable & Record<string, unknown>> {
+    readonly isDestroyed: boolean;
     // Resets the instance to its initial state
     reset(): void;
     // Destroys the instance
@@ -411,23 +396,20 @@ export interface ISnapApi<T extends Identifiable & Record<string, unknown>> {
     // Returns the current data array
     getData(): ReadonlyArray<T>;
     // Navigates to a specific page
-    gotoPage(page: number): void;
-    // Returns the total number of records
+    setCurrentPage(page: number): void;
     getTotals(): { totalRecords: number };
-    // Sets the rendering mode
-    setRenderMode(mode: RenderType): void;
+    setFormat(mode: RenderType): void;
     // Sets the theme
-    setTheme(theme: 'light' | 'dark' | 'default'): void;
+    setTheme(theme: SnapTheme): void;
     // Sets the language
     setLanguage(newLanguage: string): Promise<void>;
     // Sets the number of rows per page
     setRowsPerPage(newRowsPerPage: RowsPerPage): void;
     // Performs a search with filters
-    search(filters: Record<string, string>, merge?: boolean): void;
-    // Updates state parameters
+    search(filtering: Record<string, string>, merge?: boolean): void;
     updateParams(
         params: Partial<
-            Pick<SnapRecordsState<T>, 'currentPage' | 'rowsPerPage' | 'filters' | 'sortConditions'>
+            Pick<SnapRecordsState<T>, 'currentPage' | 'rowsPerPage' | 'filtering' | 'sorting'>
         >
     ): void;
 }

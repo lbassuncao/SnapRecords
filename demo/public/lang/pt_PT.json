@@ -19,6 +19,7 @@
     "jumpToPage": "Ir para a página",
     "retry": "Tentar novamente",
     "dragColumn": "Arrastar coluna {col}",
+    "rowsPerPageChanged": "Linhas por página alteradas para {count}",
     "errors": {
         "containerNotFound": "Container não encontrado.",
         "invalidConfig": "Configuração inválida.",
@@ -27,6 +28,6 @@
         "generic": "Ocorreu um erro."
     },
     "pagination": {
-        "showingRecords": "A mostrar {start} de {end} de um total {total} de registos"
+        "showingRecords": "A mostrar {start} a {end} de {total} registos"
     }
 }

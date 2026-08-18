@@ -1,10 +1,8 @@
-import { enableMapSet } from 'immer';
-
-// Enable Immer plugin to support Map and Set data structures
-enableMapSet();
-
-// Mock scrollIntoView function for JSDOM compatibility
 window.HTMLElement.prototype.scrollIntoView = jest.fn();
+
+if (typeof globalThis.structuredClone !== 'function') {
+    globalThis.structuredClone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
+}
 
 // Mock global fetch API for controlled testing of network requests
 global.fetch = jest.fn();
@@ -14,7 +12,7 @@ Object.defineProperty(window, 'matchMedia', {
     // Allow the property to be writable
     writable: true,
     // Mock implementation of matchMedia
-    value: jest.fn().mockImplementation(query => ({
+    value: jest.fn().mockImplementation((query: string) => ({
         // Default to false for media query matches
         matches: false,
         // Store the query string

@@ -19,6 +19,7 @@
     "jumpToPage": "Jump to page",
     "retry": "Retry",
     "dragColumn": "Drag column {col}",
+    "rowsPerPageChanged": "Rows per page changed to {count}",
     "errors": {
         "containerNotFound": "Container not found.",
         "invalidConfig": "Invalid configuration.",

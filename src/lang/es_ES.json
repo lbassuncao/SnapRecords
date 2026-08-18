@@ -19,6 +19,7 @@
     "jumpToPage": "Ir a la página",
     "retry": "Reintentar",
     "dragColumn": "Arrastrar columna {col}",
+    "rowsPerPageChanged": "Filas por página cambiadas a {count}",
     "errors": {
         "containerNotFound": "Contenedor no encontrado.",
         "invalidConfig": "Configuración inválida.",

@@ -1,0 +1,13 @@
+---
+description: Keep RELEASES.md in sync with API, behaviour, and bugfix changes
+alwaysApply: true
+---
+
+# RELEASES.md
+
+When you change SnapRecords behaviour, public API, query contract, wrappers, or user-visible bugs, update `RELEASES.md` in the same turn. Do not leave it for a later round.
+
+- Edit the current version section (`1.20.0` until the version in `package.json` changes).
+- Record upgrades vs 1.1.x in the rename tables; record new 1.20 behaviour and fixes in the existing sections (API, wrappers, bug fixes, translations).
+- Write for someone upgrading or reading the changelog, not a commit diary. Skip purely internal refactors with no user-facing effect.
+- Keep the document’s tone: short facts, tables when renaming, no marketing.

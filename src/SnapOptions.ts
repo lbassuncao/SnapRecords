@@ -1,6 +1,3 @@
-/**
-
- */
 import { RowsPerPage, RenderType } from './SnapTypes.js';
 
 /*========================================================================================================
@@ -48,8 +45,9 @@ export const defaultOptions = {
     lazyLoadMedia: false,
     // Flag to destroy the instance on window unload
     destroyOnUnload: true,
-    // Flag to enable preloading of the next page
     preloadNextPage: false,
+    debounceDelay: 250,
+    cacheExpiry: 28800000,
     // Flag to enable draggable columns
     draggableColumns: false,
     // Default rendering mode
@@ -78,6 +76,7 @@ export const config = {
         paginationLastPageBuffer: 2,
         // Buffer for showing ellipsis before the last page
         paginationEllipsisLastPageBuffer: 3,
+        minColumnWidth: 32,
     },
     // Pagination configuration
     pagination: {
@@ -111,12 +110,9 @@ export const config = {
         },
         // Page number button configuration
         numberButton: {
-            // Class names for styling
             classNames: {
-                // Base class for the button
                 base: 'snap-page-number',
-                // Class for active (current) page
-                disabled: 'snap-active',
+                active: 'snap-active',
             },
         },
         // Ellipsis configuration
@@ -137,7 +133,7 @@ export const config = {
         // Class for the error container
         errorContainer: 'snap-records-error',
         // Class for responsive table wrapper
-        tableResponsive: 'table-responsive',
+        tableResponsive: 'snap-table-responsive',
         // Table-specific classes
         table: {
             // Class for the table container
@@ -174,22 +170,14 @@ export const config = {
         totals: 'snap-totals',
         // Class for the pagination container
         paginationContainer: 'snap-pagination-container',
-        // Class for pagination elements
-        pagination: 'snap-pagination',
-        // Class for pagination cells
-        paginationCell: 'snap-pagination-cell',
         // Class for the loading overlay
         loadingOverlay: 'snap-loading-overlay',
-        // Class for table overlay
-        tableOverlay: 'snap-table-overlay',
-        // Class for list overlay
-        listOverlay: 'snap-list-overlay',
-        // Class for cards overlay
-        cardsOverlay: 'snap-cards-overlay',
         // Class for no-data message
         noData: 'snap-no-data',
         // Class for selected rows
         selected: 'snap-selected',
+        // Class when row selection is enabled
+        selectable: 'snap-selectable',
         // Class for the current row
         currentRow: 'snap-current-row',
         // Class for column resize handle

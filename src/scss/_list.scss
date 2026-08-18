@@ -18,7 +18,6 @@
         @include reset-box;
 
         .snap-list-item {
-            cursor: pointer;
             @include border();
             color: var(--sr-text-primary);
             @include transition(background-color);
@@ -29,10 +28,19 @@
                 background-color: var(--sr-bg-interactive-hover);
             }
 
-            &.snap-selected {
+            &.snap-selected,
+            &.snap-current-row {
                 background-color: var(--sr-bg-interactive-selected);
             }
+
+            &.snap-current-row {
+                @include box-shadow(inset 0 0 0 2px var(--sr-state-primary));
+            }
         }
+    }
+
+    &.snap-selectable .snap-list-item {
+        cursor: pointer;
     }
 }
 

@@ -13,6 +13,7 @@
 <br>
 
 <p align="center" style="font-size: 1.15rem">
+  <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/RELEASES.md">Releases</a></strong> |
   <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/CONFIG.md">Configuration</a></strong> |
   <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/BUILD.md">Build Guide</a></strong> |
   <strong><a href="https://github.com/lbassuncao/SnapRecords/blob/main/docs/KEYBOARD.md">Keyboard Navigation</a></strong> |
@@ -32,11 +33,11 @@ It supports server-side pagination, sorting, filtering, caching, multiple render
 ## Key Strengths
 
 - **Multiple Rendering Modes**: Supports table (`TABLE`), list (`LIST`), and mobile-friendly card (`MOBILE_CARDS`) views, adapting to various devices and use cases.
-- **Server-Side Data Handling**: Integrates with APIs for pagination, filtering, and sorting, with a 250ms debounce delay and retry mechanism (up to 3 attempts by default).
-- **Caching Support**: Uses IndexedDB via Dexie for caching server responses when `useCache` is enabled, with a default 8-hour expiry and cleanup on destroy if `destroyOnUnload` is enabled.
+- **Server-Side Data Handling**: Integrates with APIs for pagination, filtering, and sorting, with a 250ms debounce delay and retry mechanism (3 retries by default).
+- **Caching Support**: Uses IndexedDB via Dexie for caching server responses when `useCache` is enabled, with a default 8-hour expiry. `destroy()` closes the database connection; it does not delete cached responses.
 - **Interactive Features**: Includes column resizing, drag-and-drop column reordering, and row selection with keyboard navigation (ArrowUp/Down, Enter/Space, PageUp/Down).
-- **Accessibility**: Implements ARIA attributes (`aria-sort`, `aria-selected`, `aria-label`), keyboard navigation, and screen reader announcements for inclusive experiences.
-- **State Persistence**: Persists UI state (column order, widths, filters, page, etc.) in `localStorage` when `persistState` is enabled.
+- **Accessibility**: ARIA sort labels and pagination names in all modes; `aria-selected` only on table rows (`role="row"`). Keyboard navigation and screen reader announcements.
+- **State Persistence**: Persists UI state (column order, widths, `filtering`, page, etc.) in `localStorage` when `persistState` is enabled.
 - **Customizable Styling**: Provides built-in `light` and `dark` themes, plus a `default` theme that inherits styles from the host page via CSS Custom Properties (`--sr-...`). This allows for seamless integration with any design system.
 - **Type Safety**: Written in TypeScript with generic typing for type-safe data and configuration.
 - **Extensibility**: Offers lifecycle hooks (`preDataLoad`, `postDataLoad`, `preRender`, `postRender`, `selectionChanged`) and customizable renderer, event, state, URL, and cache managers.
@@ -48,21 +49,26 @@ It supports server-side pagination, sorting, filtering, caching, multiple render
 To quickly set up SnapRecords:
 
 1. **Install via NPM**:
+
     ```bash
     npm install snap-records
     ```
 
 2. **Include Styles**:
-    If using a bundler (Vite, Webpack, etc.):
+   If using a bundler (Vite, Webpack, etc.):
+
     ```typescript
-    import 'snap-records/dist/snap-records.css';
+    import 'snap-records/style.css';
     ```
+
     Or via HTML:
+
     ```html
     <link rel="stylesheet" href="/node_modules/snap-records/dist/snap-records.css" />
     ```
 
 3. **Create a container**:
+
     ```html
     <div id="table-container"></div>
     ```
@@ -90,63 +96,15 @@ npm install snap-records
 
 ### Prerequisites
 
-- Node.js (version 20 or higher)
-- TypeScript (version 5 or higher)
+- Node.js (version 26.7.0 or higher; see `.nvmrc`)
+- TypeScript (version 6 or higher)
 - A modern browser supporting IndexedDB for caching
 
 ### Dependencies
 
-SnapRecords relies on the following runtime dependencies, which must be installed in your project:
+`dexie`, `immer`, and `lru-cache` are runtime dependencies of `snap-records` and are installed automatically with the package.
 
-- `dexie` (^4.0.11): For IndexedDB caching of server responses.
-- `immer` (^10.1.1): For immutable state management.
-- `lru-cache` (^11.1.0): For efficient caching of formatted cell values.
-
-Install them with:
-
-```bash
-npm install dexie immer lru-cache
-```
-
-### Steps
-
-1. **Install Dependencies**:
-
-    ```bash
-    npm install dexie immer lru-cache
-    ```
-
-2. **Add SnapRecords**: Copy the source files (`SnapRecords.ts`, `SnapApi.ts`, `SnapRenderer.ts`, `EventManager.ts`, `SnapRecordsDB.ts`, `Translations.ts`, `SnapOptions.ts`, `SnapTypes.ts`, `Configuration.ts`, `StateManager.ts`, `UrlManager.ts`, `CacheManager.ts`, `utils.ts`, and `scss/SnapRecords.scss`) into your project.
-
-3. **Add Translation Files**: Place translation JSON files (e.g., `en_US.json`, `pt_PT.json`, `es_ES.json`) in the `/lang` directory within your application's public directory:
-
-    ```
-    public/
-    └── lang/
-        ├── en_US.json
-        ├── pt_PT.json
-        └── es_ES.json
-    ```
-
-4. **Include Styles**: Compile the SCSS file to CSS and include it in your application:
-
-    ````bash
-    sass src/scss/SnapRecords.scss dist/snap-records.css --style=compressed --source-map
-    ```html
-    <link rel="stylesheet" href="/path/to/snap-records.css">
-    ````
-
-5. **Import and Initialize**: Import SnapRecords and initialize it:
-
-    ```typescript
-    import { SnapRecords, RenderType, RowsPerPage } from './SnapRecords';
-
-    const snapRecords = new SnapRecords('table-container', {
-        url: 'https://api.example.com/data',
-        columns: ['id', 'name', 'email'],
-        rowsPerPage: RowsPerPage.DEFAULT,
-    });
-    ```
+Translations ship in `snap-records/lang/*`. Serve them from a public `/lang` path, or set `langPath` to wherever you host the JSON files.
 
 ## Usage Examples
 
@@ -241,24 +199,28 @@ const snapRecords = new SnapRecords('table-container', {
 
 const api = snapRecords.getApi();
 api.search({ status: 'active' }, true);
-api.gotoPage(2);
+api.setCurrentPage(2);
 api.setTheme('light');
-api.setRenderMode(RenderType.MOBILE_CARDS);
+api.setFormat(RenderType.MOBILE_CARDS);
 ```
 
 ## Configuration Options
 
-The `SnapRecordsOptions<T>` interface defines all configuration options. Key options include (see [config.md](https://github.com/lbassuncao/SnapRecords/blob/main/docs/CONFIG.md) for full details):
+The `SnapRecordsOptions<T>` interface defines all configuration options. See [CONFIG.md](https://github.com/lbassuncao/SnapRecords/blob/main/docs/CONFIG.md) for full details.
 
 - `url` (string, required): API URL for data fetching.
 - `columns` (string[], required): Column keys to display.
 - `columnTitles` (string[]): Custom header titles.
 - `columnFormatters` ({ [key: string]: (value, row) => string }): Custom cell formatters, cached with `lru-cache`.
-- `format` (RenderType): Rendering mode (`TABLE`, `LIST`, `MOBILE_CARDS`). Default: `TABLE`.
+- `format` (RenderType): Rendering mode (`TABLE`, `LIST`, `MOBILE_CARDS`). Default: `TABLE`. Change at runtime with `setFormat()`.
 - `rowsPerPage` (RowsPerPage): Rows per page (10, 20, 50, 100, 250, 500, 1000). Default: 10.
+- `filtering` (`Record<string, string>`): Initial filters. Sent to the server as `filtering[key]`. Update later with `search()` or `updateParams()`.
+- `sorting` (`SortCondition[]`): Initial sort. Sent to the server as `sorting[column]`.
 - `useCache` (boolean): Enables IndexedDB caching. Default: `false`.
-- `usePushState` (boolean): Updates browser URL with state. Default: `false`.
+- `usePushState` (boolean): Syncs page/filters/sort to the browser URL via `StateManager`, merging into the existing query string. Default: `false`.
 - `language` (string): UI language. Default: `en_US`.
+- `langPath` (string): Directory for translation JSON files. Default: `/lang`.
+- `debounceDelay` (number): Delay in ms before reloading data. Default: `250`.
 - `headerCellClasses` (string[]): Header CSS classes, with `no-sorting` to disable sorting.
 - `selectable` (boolean): Enables row selection. Default: `false`.
 - `draggableColumns` (boolean): Enables column drag-and-drop. Default: `false`.
@@ -267,35 +229,39 @@ The `SnapRecordsOptions<T>` interface defines all configuration options. Key opt
 - `debug` (boolean): Enables debug logs. Default: `false`.
 - `lazyLoadMedia` (boolean): Enables lazy loading for images. Default: `false`.
 - `formatCacheSize` (number): Sets the maximum size of the LRU format cache. Default: 500.
+- `preloadNextPage` (boolean): Prefetches the next page. Default: `false`.
 - `lifecycleHooks` (LifecycleHooks<T>): Callbacks for lifecycle events.
 - `prevButton`, `nextButton`: Customizes pagination buttons with text, HTML, or templates.
 
+The constructor accepts a container element id (`string`) or an `HTMLElement`.
+
 ## API Methods
 
-The `SnapApi` class provides methods for interacting with the component:
+Use `snapRecords.getApi()` for the public `ISnapApi` surface. Method names match the implementation:
 
-- `search(filters: Record<string, string>, merge?: boolean): void` - Applies filters and reloads data.
-- `updateParams(params: Partial<Pick<SnapRecordsState<T>, 'currentPage' | 'rowsPerPage' | 'filters' | 'sortConditions'>>): void` - Updates multiple parameters.
-- `reset(): void` - Clears filters, sorting, and state.
-- `refresh(): void` - Reloads current data view.
-- `gotoPage(page: number): void` - Navigates to a page.
-- `setTheme(theme: 'light' | 'dark' | 'default'): void` - Sets the theme.
-- `setRenderMode(mode: RenderType): void` - Changes rendering mode.
-- `setRowsPerPage(newRowsPerPage: RowsPerPage): void` - Sets rows per page.
-- `setLanguage(newLanguage: string): Promise<void>` - Sets UI language.
-- `getData(): ReadonlyArray<T>` - Returns current data.
-- `getTotals(): { totalRecords: number }` - Returns total records.
-- `getSelectedRows(): T[]` - Returns selected rows.
-- `clearSelection(): void` - Clears row selections.
-- `destroy(): void` - Destroys the instance, clearing elements and cache.
+- `search(filtering: Record<string, string>, merge?: boolean): void` — Applies `filtering` and reloads data.
+- `updateParams(params: Partial<Pick<SnapRecordsState<T>, 'currentPage' | 'rowsPerPage' | 'filtering' | 'sorting'>>): void` — Updates those state fields and reloads.
+- `reset(): void` — Restores constructor `filtering`, sorting, rows per page, and column layout.
+- `refresh(): void` — Reloads the current data view.
+- `setCurrentPage(page: number): void` — Navigates to a page.
+- `setTheme(theme: SnapTheme): void` — Sets `'light' | 'dark' | 'default'`.
+- `setFormat(mode: RenderType): void` — Sets the `format` used for rendering.
+- `setRowsPerPage(newRowsPerPage: RowsPerPage): void` — Sets rows per page.
+- `setLanguage(newLanguage: string): Promise<void>` — Sets UI language.
+- `getData(): ReadonlyArray<T>` — Returns current data.
+- `getTotals(): { totalRecords: number }` — Returns total records.
+- `getSelectedRows(): T[]` — Returns selected rows.
+- `clearSelection(): void` — Clears row selections.
+- `isDestroyed` — `true` after `destroy()`.
+- `destroy(): void` — Removes listeners, clears the container, and closes the cache database connection. Does not wipe cached API responses.
 
 Example:
 
 ```typescript
 const api = snapRecords.getApi();
 api.search({ status: 'active' }, true);
-api.gotoPage(2);
-api.setRenderMode(RenderType.LIST);
+api.setCurrentPage(2);
+api.setFormat(RenderType.LIST);
 api.clearSelection();
 api.destroy();
 ```
@@ -324,15 +290,15 @@ Override styles in your CSS as needed.
 
 SnapRecords prioritizes accessibility:
 
-- **ARIA Attributes**: Supports `aria-sort`, `aria-selected`, `aria-label` for table, list, and card modes.
-- **Keyboard Navigation**: ArrowUp/Down for row navigation, Enter/Space for selection, PageUp/Down for pagination (see [keyboard.md](https://github.com/lbassuncao/SnapRecords/blob/main/docs/KEYBOARD.md)).
+- **ARIA Attributes**: `aria-sort` and `aria-label` in all modes. `aria-selected` only on table rows (`role="row"`).
+- **Keyboard Navigation**: ArrowUp/Down for row navigation, Enter/Space for selection, PageUp/Down for pagination (see [KEYBOARD.md](https://github.com/lbassuncao/SnapRecords/blob/main/docs/KEYBOARD.md)).
 - **Screen Reader Support**: Announces updates (e.g., row selection, mode changes) via ARIA live regions.
 
 ## State Management
 
 The `SnapRecordsState` interface manages state, including:
 
-- Current page, rows per page, filters, sort conditions.
+- Current page, rows per page, `filtering`, `sorting`.
 - Column order, widths, titles.
 - Data, total records, format, language, theme.
 
@@ -340,40 +306,41 @@ State is persisted to `localStorage` when `persistState` is `true`, managed by `
 
 ## Internationalization
 
-Translations are loaded from `/lang` JSON files (e.g., `en_US.json`) via `TranslationManager`. Add new languages by creating JSON files following the `Translation` interface:
+Translations are loaded from `{langPath}/{language}.json` (default `/lang/en_US.json`) by `TranslationManager` in `Translations.ts`. Copy files from `node_modules/snap-records/lang/` into your public directory, or set `langPath`. New files must follow the `Translation` interface, for example:
 
 ```json
 {
-    "errors": {
-        "generic": "An error occurred.",
-        "invalidConfig": "Invalid configuration: {reason}",
-        "containerNotFound": "Container with ID {id} not found.",
-        "dataLoadingFailed": "Failed to load data: {error}",
-        "renderFailed": "Failed to render: {error}"
-    },
     "loading": "Loading...",
     "totalRecords": "Total records: {total}",
-    "filteredRecords": "Filtered records: {total}",
-    "errorTitle": "Error",
-    "errorMessage": "An unexpected error occurred.",
-    "noDataAvailable": "No data available.",
+    "filteredRecords": "Filtered records: {filtered}",
     "previous": "Previous",
     "next": "Next",
-    "retry": "Retry",
-    "pagination": {
-        "showingRecords": "Showing {start} to {end} of {total} records"
-    },
-    "currentPage": "Page {page}",
-    "jumpToPage": "Jump to page",
-    "pageNavigation": "Page navigation",
+    "errorTitle": "Error",
+    "errorMessage": "An error occurred.",
+    "noDataAvailable": "No data available.",
+    "columnResizeHandle": "Resize column",
     "sortAscending": "Sort ascending",
     "sortDescending": "Sort descending",
     "removeSort": "Remove sort",
     "rowSelected": "Row selected",
     "rowDeselected": "Row deselected",
-    "columnResizeHandle": "Resize column",
+    "currentPage": "Current page: {page}",
+    "pageNavigation": "Page navigation",
+    "loadMore": "Load More",
+    "jumpToPage": "Jump to page",
+    "retry": "Retry",
     "dragColumn": "Drag column {col}",
-    "loadMore": "Load more"
+    "rowsPerPageChanged": "Rows per page changed to {count}",
+    "errors": {
+        "containerNotFound": "Container not found.",
+        "invalidConfig": "Invalid configuration.",
+        "dataLoadingFailed": "Failed to load data: {error}",
+        "renderFailed": "Failed to render: {error}",
+        "generic": "An error occurred."
+    },
+    "pagination": {
+        "showingRecords": "Showing {start} to {end} of {total} records"
+    }
 }
 ```
 
@@ -424,7 +391,7 @@ Compile TypeScript and SCSS:
 npm run build
 ```
 
-This runs `npm run build:js` (for `tsc --noEmit` and `vite build`) and `npm run build:css` (for SCSS compilation with source maps).
+This runs `npm run build:js` (`vite build`), `npm run build:css` (Sass), and copies `src/lang/*.json` into `dist/lang/`.
 
 ### Testing
 
@@ -436,19 +403,13 @@ npm test
 
 ### Extending
 
-Add custom translations by creating a JSON file in `/lang`:
-
-```json
-{
-    "loading": "Chargement...",
-    "errors": {
-        "generic": "Une erreur est survenue."
-        // ...
-    }
-}
-```
+Add custom translations by creating a JSON file that matches `src/lang/en_US.json` and serving it from `langPath`.
 
 Customize rendering or event handling by providing custom `renderer`, `eventManager`, `stateManager`, `urlManager`, or `cacheManager` in the options.
+
+### Framework Wrappers
+
+React, Vue, Svelte, and Angular wrapper components live in [`wrappers/`](https://github.com/lbassuncao/SnapRecords/tree/main/wrappers) on GitHub (`SnapRecordsReact.tsx`, `SnapRecordsVue.vue`, `SnapRecords.svelte`, `snap-records.component.ts`). They are **not** published in the `snap-records` npm package and are not importable from it (there is no `snap-records/wrappers/*` export) — each one needs to be compiled by your own app's toolchain (JSX, SFC, Angular CLI, etc.), so copy the file for your framework straight into your project's source tree and adjust the import path to `snap-records`. See [CONFIG.md](https://github.com/lbassuncao/SnapRecords/blob/main/docs/CONFIG.md#public-api-getapi) for what they sync automatically, and [RELEASES.md](https://github.com/lbassuncao/SnapRecords/blob/main/RELEASES.md#framework-wrappers) for their exact behavior.
 
 ## Additional Notes
 

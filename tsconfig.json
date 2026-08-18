@@ -10,9 +10,8 @@
         "skipLibCheck": true,
         "esModuleInterop": true,
         "resolveJsonModule": true,
-        "moduleResolution": "node",
+        "moduleResolution": "bundler",
         "lib": ["ES6", "DOM", "ES2019"],
-        "declarationDir": "./dist/types",
         "forceConsistentCasingInFileNames": true
     },
     "include": ["src"],

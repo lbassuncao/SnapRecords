@@ -3,14 +3,16 @@ import {
     RowsPerPage,
     StateUpdater,
     Identifiable,
-    SortCondition,
-    OrderDirection,
     PersistedState,
     SnapRecordsState,
 } from './SnapTypes.js';
-import { log } from './utils.js';
-import { produce, Draft } from 'immer';
+import { produce, Draft, enableMapSet } from 'immer';
+import { compactFiltering, sanitizeRowsPerPage, normalizeSorting } from './utils.js';
 import { SnapRecords } from './SnapRecords.js';
+
+// Required: state.columnWidths is a Map. Without this, produce() throws in production
+// (tests used to hide the bug by calling enableMapSet only in setupTests).
+enableMapSet();
 
 /*========================================================================================================
 
@@ -33,7 +35,8 @@ export class StateManager<T extends Identifiable & Record<string, unknown>> {
     // Add timeout for debounce operations
     readonly #DEBOUNCE_TIMEOUT_MS = 500;
     // Add debounce for save operations
-    #saveDebounceTimer: NodeJS.Timeout | null = null;
+    #saveDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+    #suppressUrlUpdate = false;
 
     // Constructor initializes the state manager with the parent instance
     constructor(parent: SnapRecords<T>) {
@@ -42,174 +45,191 @@ export class StateManager<T extends Identifiable & Record<string, unknown>> {
 
     // Updates the state using an Immer draft
     public setState(updater: StateUpdater<T>): void {
-        // Create a new state using Immer's produce for immutability
-        const nextState = produce(this.#parent.state, updater);
-        // Only update if the state has changed
-        if (nextState !== this.#parent.state) {
+        if (this.#parent.isDestroyed) return;
+        const previousState = this.#parent.state;
+        const nextState = produce(previousState, updater);
+        if (nextState !== previousState) {
             this.#parent.state = nextState as SnapRecordsState<T>;
-            log(this.#parent.debug, LogLevel.INFO, 'State updated.', this.#parent.state);
-            // Persist state to storage and update URL
+            this.#parent.log(LogLevel.INFO, 'State updated.', this.#parent.state);
             this.saveStateToStorage();
-            this.updateURLState();
+            if (!this.#suppressUrlUpdate && this.#queryStateChanged(previousState, nextState)) {
+                this.updateURLState('push');
+            }
         }
     }
 
-    // Updates the URL with current state parameters if usePushState is enabled
-    public updateURLState(): void {
-        // Skip if URL state persistence is disabled
-        if (!this.#parent.usePushState) return;
-        log(this.#parent.debug, LogLevel.INFO, 'Updating URL with current state.');
-        // Create URLSearchParams to hold query parameters
-        const params = new URLSearchParams();
-        params.set('page', this.#parent.state.currentPage.toString());
-        params.set('perPage', this.#parent.state.rowsPerPage.toString());
-        // Add filter parameters
-        Object.entries(this.#parent.state.filters).forEach(([key, value]) => {
-            if (value) params.set(`filtering[${key}]`, String(value));
-        });
-        // Add sort conditions
-        this.#parent.state.sortConditions.forEach(([column, direction]) => {
-            params.append(`sorting[${column}]`, direction);
-        });
-        // Update the URL without reloading
-        const newUrl = `${window.location.pathname}?${params.toString()}`;
-        window.history.pushState({ path: newUrl }, '', newUrl);
+    public suppressUrlUpdates(fn: () => void): void {
+        this.#suppressUrlUpdate = true;
+        try {
+            fn();
+        } finally {
+            this.#suppressUrlUpdate = false;
+        }
     }
 
-    // Loads state from URL parameters if usePushState is enabled
-    public loadFromURL(): void {
-        // Skip if URL state persistence is disabled
-        if (!this.#parent.usePushState) return;
-        log(this.#parent.debug, LogLevel.INFO, 'Loading state from URL parameters...');
-        // Parse URL query parameters
-        const params = new URLSearchParams(window.location.search);
-        if (params.toString() === '') {
-            log(this.#parent.debug, LogLevel.INFO, 'No URL parameters to load.');
+    public updateURLState(mode: 'push' | 'replace' = 'push'): void {
+        if (!this.#parent.usePushState || this.#parent.isDestroyed) return;
+        this.#parent.log(LogLevel.INFO, 'Updating URL with current state.');
+        const snapQuery = this.#parent.urlManager.toSearchParams(
+            this.#parent.urlManager.getServerParams()
+        );
+        const merged = new URLSearchParams(window.location.search);
+        this.#parent.urlManager.stripSnapParams(merged);
+        snapQuery.forEach((value, key) => {
+            merged.append(key, value);
+        });
+        const search = merged.toString();
+        const newUrl = `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`;
+        const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        if (newUrl === current) return;
+        if (mode === 'replace') {
+            window.history.replaceState({ snapRecords: true }, '', newUrl);
+        } else {
+            window.history.pushState({ snapRecords: true }, '', newUrl);
+        }
+    }
+
+    public loadFromURL(
+        options: { emptyMeansDefaults?: boolean; absentSnapFieldsReset?: boolean } = {}
+    ): void {
+        if (!this.#parent.usePushState || this.#parent.isDestroyed) return;
+        this.#parent.log(LogLevel.INFO, 'Loading state from URL parameters...');
+        const hasSnapQuery = this.#parent.urlManager.hasSnapQuery(window.location.search);
+        const configOptions = this.#parent.getConfigOptions();
+
+        if (!hasSnapQuery) {
+            if (!options.emptyMeansDefaults) {
+                this.#parent.log(LogLevel.INFO, 'No URL parameters to load.');
+                return;
+            }
+            if (this.#parent.persistState) {
+                this.loadStateFromStorage();
+                return;
+            }
+            this.#suppressUrlUpdate = true;
+            try {
+                this.setState((draft) => {
+                    draft.currentPage = 1;
+                    draft.rowsPerPage = configOptions.rowsPerPage ?? RowsPerPage.DEFAULT;
+                    (draft.filtering as Record<string, string>) = compactFiltering(
+                        configOptions.filtering ?? {}
+                    );
+                    draft.sorting = normalizeSorting(configOptions.sorting ?? []);
+                });
+            } finally {
+                this.#suppressUrlUpdate = false;
+            }
             return;
         }
 
-        // Update state with URL parameters
-        this.setState((draft) => {
-            // Load page number with validation
-            const pageParam = params.get('page');
-            if (pageParam) {
-                const page = parseInt(pageParam, 10);
-                draft.currentPage = isNaN(page) ? 1 : Math.max(1, page);
-            }
-
-            // Load rows per page with validation
-            const perPageParam = params.get('perPage');
-            if (perPageParam) {
-                const perPage = parseInt(perPageParam, 10);
-                // Validate against allowed values
-                const allowedValues = [
-                    RowsPerPage.DEFAULT,
-                    RowsPerPage.TWENTY,
-                    RowsPerPage.FIFTY,
-                    RowsPerPage.HUNDRED,
-                    RowsPerPage.TWO_HUNDRED_FIFTY,
-                    RowsPerPage.FIVE_HUNDRED,
-                    RowsPerPage.THOUSAND,
-                ];
-                draft.rowsPerPage =
-                    isNaN(perPage) || !allowedValues.includes(perPage)
-                        ? RowsPerPage.DEFAULT
-                        : (perPage as RowsPerPage);
-            }
-
-            // Load filters
-            const newFilters: Record<string, string> = {};
-            params.forEach((value, key) => {
-                if (key.startsWith('filtering[')) {
-                    const filterKey = key.substring(10, key.length - 1);
-                    newFilters[filterKey] = value;
+        const parsed = this.#parent.urlManager.parseSearchParams(window.location.search);
+        this.#suppressUrlUpdate = true;
+        try {
+            this.setState((draft) => {
+                if (parsed.currentPage !== undefined) {
+                    draft.currentPage = parsed.currentPage;
+                }
+                if (parsed.rowsPerPage !== undefined) {
+                    draft.rowsPerPage = this.#normalizeRowsPerPage(parsed.rowsPerPage);
+                }
+                if (parsed.filtering !== undefined) {
+                    (draft.filtering as Record<string, string>) = compactFiltering(
+                        parsed.filtering
+                    );
+                } else if (options.absentSnapFieldsReset) {
+                    (draft.filtering as Record<string, string>) = {};
+                }
+                if (parsed.sorting !== undefined) {
+                    draft.sorting = normalizeSorting(parsed.sorting);
+                } else if (options.absentSnapFieldsReset) {
+                    draft.sorting = [];
                 }
             });
-            (draft.filters as Record<string, string>) = newFilters;
+        } finally {
+            this.#suppressUrlUpdate = false;
+        }
+    }
 
-            // Load sort conditions
-            const newSorts: Array<SortCondition> = [];
-            params.forEach((value, key) => {
-                if (key.startsWith('sorting[')) {
-                    const column = key.substring(key.indexOf('[') + 1, key.indexOf(']'));
-                    if (
-                        Object.values(OrderDirection).includes(
-                            value.toUpperCase() as OrderDirection
-                        )
-                    ) {
-                        newSorts.push([column, value.toUpperCase() as OrderDirection]);
-                    }
-                }
-            });
-            draft.sortConditions = newSorts;
-        });
+    public destroy(): void {
+        if (this.#saveDebounceTimer) {
+            clearTimeout(this.#saveDebounceTimer);
+            this.#saveDebounceTimer = null;
+            this.#persistStateNow();
+        }
+    }
+
+    #queryStateChanged(previous: SnapRecordsState<T>, next: SnapRecordsState<T>): boolean {
+        return (
+            previous.currentPage !== next.currentPage ||
+            previous.rowsPerPage !== next.rowsPerPage ||
+            JSON.stringify(previous.filtering) !== JSON.stringify(next.filtering) ||
+            JSON.stringify(previous.sorting) !== JSON.stringify(next.sorting)
+        );
+    }
+
+    #normalizeRowsPerPage(value: number): RowsPerPage {
+        return sanitizeRowsPerPage(value, RowsPerPage.DEFAULT) as RowsPerPage;
     }
 
     // Saves the current state to localStorage if persistState is enabled
     public saveStateToStorage(): void {
-        // Skip if state persistence is disabled
-        if (!this.#parent.persistState) return;
+        if (!this.#parent.persistState || this.#parent.isDestroyed) return;
 
         // Debounce to prevent excessive writings
         if (this.#saveDebounceTimer) {
             clearTimeout(this.#saveDebounceTimer);
         }
 
-        log(this.#parent.debug, LogLevel.INFO, 'Saving state to localStorage...');
+        this.#parent.log(LogLevel.INFO, 'Saving state to localStorage...');
 
-        // Extract relevant state properties
+        this.#saveDebounceTimer = setTimeout(() => {
+            this.#saveDebounceTimer = null;
+            this.#persistStateNow();
+        }, this.#DEBOUNCE_TIMEOUT_MS);
+    }
+
+    #persistStateNow(): void {
+        if (!this.#parent.persistState) return;
         const {
             columns,
             columnWidths,
-            sortConditions,
-            filters,
+            sorting,
+            filtering,
             currentPage,
             rowsPerPage,
             headerCellClasses,
         } = this.#parent.state;
-        // Create state object for storage
         const stateToSave: PersistedState = {
             columns: [...columns],
             columnWidths: Array.from(columnWidths.entries()),
-            sortConditions: [...sortConditions],
-            filters: { ...filters },
+            sorting: [...sorting],
+            filtering: { ...filtering },
             currentPage,
             rowsPerPage,
             headerCellClasses: [...headerCellClasses],
         };
-
-        this.#saveDebounceTimer = setTimeout(() => {
-            try {
-                // Save state to localStorage
-                localStorage.setItem(this.#parent.storageKey, JSON.stringify(stateToSave));
-                log(this.#parent.debug, LogLevel.INFO, 'State saved successfully.');
-            } catch (error) {
-                // Log error and continue
-                log(
-                    this.#parent.debug,
-                    LogLevel.ERROR,
-                    'Could not save state to localStorage.',
-                    error
-                );
-            }
-        }, this.#DEBOUNCE_TIMEOUT_MS);
+        try {
+            localStorage.setItem(this.#parent.storageKey, JSON.stringify(stateToSave));
+            this.#parent.log(LogLevel.INFO, 'State saved successfully.');
+        } catch (error) {
+            this.#parent.log(LogLevel.ERROR, 'Could not save state to localStorage.', error);
+        }
     }
 
     // Loads state from localStorage if persistState is enabled
     public loadStateFromStorage(): void {
-        // Skip if state persistence is disabled
-        if (!this.#parent.persistState) return;
-        log(this.#parent.debug, LogLevel.INFO, 'Attempting to load state from localStorage...');
+        if (!this.#parent.persistState || this.#parent.isDestroyed) return;
+        this.#parent.log(LogLevel.INFO, 'Attempting to load state from localStorage...');
         try {
             // Retrieve saved state
             const savedStateJSON = localStorage.getItem(this.#parent.storageKey);
             if (!savedStateJSON) {
-                log(this.#parent.debug, LogLevel.INFO, 'No saved state found in localStorage.');
+                this.#parent.log(LogLevel.INFO, 'No saved state found in localStorage.');
                 return;
             }
             // Parse saved state
             const savedState = JSON.parse(savedStateJSON) as Partial<PersistedState>;
-            log(this.#parent.debug, LogLevel.INFO, 'Saved state found, applying...', savedState);
+            this.#parent.log(LogLevel.INFO, 'Saved state found, applying...', savedState);
 
             // Apply saved state with type validation
             this.setState((draft) => {
@@ -221,67 +241,57 @@ export class StateManager<T extends Identifiable & Record<string, unknown>> {
                 // Validate and apply column widths
                 if (savedState.columnWidths && Array.isArray(savedState.columnWidths)) {
                     const validWidths = savedState.columnWidths.filter(
-                        (entry) =>
+                        (entry): entry is [string, number] =>
                             Array.isArray(entry) &&
                             entry.length === 2 &&
                             typeof entry[0] === 'string' &&
-                            typeof entry[1] === 'number'
+                            Number.isFinite(entry[1]) &&
+                            entry[1] > 0
                     );
                     (draft.columnWidths as Map<string, number>) = new Map(validWidths);
                 }
 
                 // Validate and apply sort conditions
-                if (savedState.sortConditions) {
-                    const validSorts = savedState.sortConditions.filter(
-                        (condition) =>
-                            Array.isArray(condition) &&
-                            condition.length === 2 &&
-                            typeof condition[0] === 'string' &&
-                            Object.values(OrderDirection).includes(condition[1])
-                    );
-                    draft.sortConditions = validSorts;
+                if (savedState.sorting) {
+                    draft.sorting = normalizeSorting(savedState.sorting);
                 }
 
-                // Validate and apply filters
-                if (savedState.filters && typeof savedState.filters === 'object') {
-                    const validFilters: Record<string, string> = {};
-                    for (const [key, value] of Object.entries(savedState.filters)) {
+                if (
+                    savedState.filtering &&
+                    typeof savedState.filtering === 'object' &&
+                    !Array.isArray(savedState.filtering)
+                ) {
+                    const validFiltering: Record<string, string> = {};
+                    for (const [key, value] of Object.entries(savedState.filtering)) {
                         if (typeof value === 'string') {
-                            validFilters[key] = value;
+                            validFiltering[key] = value;
                         }
                     }
-                    draft.filters = validFilters;
+                    draft.filtering = compactFiltering(validFiltering);
+                }
+
+                if (
+                    savedState.headerCellClasses &&
+                    Array.isArray(savedState.headerCellClasses) &&
+                    savedState.headerCellClasses.length === draft.columns.length &&
+                    savedState.headerCellClasses.every((entry) => typeof entry === 'string')
+                ) {
+                    draft.headerCellClasses = [...savedState.headerCellClasses];
                 }
 
                 // Validate and apply current page
                 if (typeof savedState.currentPage === 'number') {
-                    draft.currentPage = Math.max(1, savedState.currentPage);
+                    draft.currentPage = Math.max(1, Math.trunc(savedState.currentPage) || 1);
                 }
 
                 // Validate and apply rows per page
                 if (typeof savedState.rowsPerPage === 'number') {
-                    const allowedValues = [
-                        RowsPerPage.DEFAULT,
-                        RowsPerPage.TWENTY,
-                        RowsPerPage.FIFTY,
-                        RowsPerPage.HUNDRED,
-                        RowsPerPage.TWO_HUNDRED_FIFTY,
-                        RowsPerPage.FIVE_HUNDRED,
-                        RowsPerPage.THOUSAND,
-                    ];
-                    if (allowedValues.includes(savedState.rowsPerPage)) {
-                        draft.rowsPerPage = savedState.rowsPerPage;
-                    }
+                    draft.rowsPerPage = this.#normalizeRowsPerPage(savedState.rowsPerPage);
                 }
             });
         } catch (error) {
             // Log error and clear invalid state
-            log(
-                this.#parent.debug,
-                LogLevel.ERROR,
-                'Could not load state from localStorage.',
-                error
-            );
+            this.#parent.log(LogLevel.ERROR, 'Could not load state from localStorage.', error);
             localStorage.removeItem(this.#parent.storageKey);
         }
     }
@@ -315,7 +325,7 @@ export class StateManager<T extends Identifiable & Record<string, unknown>> {
             }
         });
 
-        log(this.#parent.debug, LogLevel.LOG, 'Applying stored column order:', newColumnsOrder);
+        this.#parent.log(LogLevel.LOG, 'Applying stored column order:', newColumnsOrder);
         state.columns = newColumnsOrder;
         state.columnTitles = newTitles;
         state.headerCellClasses = newClasses;

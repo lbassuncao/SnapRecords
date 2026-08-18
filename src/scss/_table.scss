@@ -31,13 +31,19 @@
             text-align: left;
             font-weight: 600;
             position: relative;
-            resize: horizontal;
             overflow: hidden;
 
-            a {
+            button {
                 color: var(--sr-text-primary);
                 text-decoration: none;
                 display: block;
+                width: 100%;
+                margin: 0;
+                border: none;
+                background: transparent;
+                font: inherit;
+                text-align: left;
+                cursor: pointer;
                 position: relative;
                 padding-right: 20px;
 
@@ -123,6 +129,10 @@
         color: var(--sr-text-primary);
         font-style: italic;
         grid-column: 1 / -1;
+    }
+
+    &.snap-selectable .snap-records-body tr {
+        cursor: pointer;
     }
 
     .snap-record-start,

@@ -14,7 +14,10 @@ import { defineConfig } from 'vite';
 export default defineConfig(({ mode }) => ({
     plugins: [
         dts({
-            rollupTypes: true,
+            processor: 'vue',
+            tsconfigPath: './tsconfig.json',
+            include: ['src'],
+            bundleTypes: true,
             insertTypesEntry: true,
         }),
     ],
@@ -25,27 +28,32 @@ export default defineConfig(({ mode }) => ({
         outDir: 'dist',
         sourcemap: true,
         minify: 'terser',
-         terserOptions: {
+        terserOptions: {
             format: {
                 comments: false,
             },
             compress: {
                 drop_console: true,
                 drop_debugger: true,
-            }
+            },
         },
         rollupOptions: {
             output: {
                 // rename CSS files
                 assetFileNames: 'snap-records.[ext]',
             },
+            checks: {
+                pluginTimings: false,
+            },
         },
-         lib: {
+        lib: {
             name: 'SnapRecords',
-            entry: path.resolve(__dirname, 'src/index.ts'),
-            fileName: (format) => `snap-records.${format}.js`,
+            entry: path.resolve(import.meta.dirname, 'src/index.ts'),
+            // The UMD build is a CommonJS bundle; ".js" would be loaded as ESM under
+            // this package's "type": "module", leaving it with no exports under require().
+            fileName: (format) => `snap-records.${format}.${format === 'umd' ? 'cjs' : 'js'}`,
         },
-    }
+    },
 }));
 
 /*=============================================================================================================
