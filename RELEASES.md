@@ -202,6 +202,10 @@ React, Vue, Svelte, and Angular wrappers pass the container element (not a rando
 - `popstate` re-renders sort/pagination chrome before the debounced fetch completes.
 - Column sort clears the format cache before reload.
 - `reset()` clamps `rowsPerPage` through the same sanitizer as the constructor.
+- `headerCellClasses` length is validated against `columns` in the constructor (`Configuration.validateHeaderCellClasses`). A mismatched, non-empty array now logs a warning and falls back to `[]` instead of silently misaligning header classes across columns after drag-and-drop reorder (`reorderColumns()`) or a `persistState` column-order restore.
+- Removed unused `config.classes` entries (`paginationCell`, `tableOverlay`, `listOverlay`, `cardsOverlay`) that were never applied to the DOM or styled in CSS.
+- `tsconfig.json` / `tsconfig.test.json` use `moduleResolution: "bundler"` instead of `"node"`. TypeScript 6.0.3 (the pinned devDependency) treats `"node"` as a hard error (`TS5107`), so `tsc --noEmit` against either config failed outright even though `vite build` and `ts-jest` masked it by compiling through their own, more lenient paths.
+- **CommonJS `require('snap-records')` returned an empty module.** The UMD build was emitted as `dist/snap-records.umd.js`, but `package.json` has `"type": "module"`, so Node loaded that plain `.js` file as ESM and silently produced a namespace object with none of the UMD bundle's exports (`SnapRecords` was `undefined`). The UMD output is now `dist/snap-records.umd.cjs` (`.cjs` is always loaded as CommonJS regardless of `"type"`), and `package.json`'s `main` and `exports["."].require` were updated to match. Verified both `require()` and `import` resolve `SnapRecords` correctly against the built package.
 
 ### Translations
 

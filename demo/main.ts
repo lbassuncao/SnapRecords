@@ -50,6 +50,18 @@ function currentApi(): ISnapApi<Book> | undefined {
     return grid?.getApi();
 }
 
+function applyTheme(theme: SnapTheme): void {
+    currentApi()?.setTheme(theme);
+    if (theme === 'default') {
+        document.documentElement.removeAttribute('data-bs-theme');
+    } else {
+        document.documentElement.setAttribute(
+            'data-bs-theme',
+            theme === 'light' ? 'light' : 'dark'
+        );
+    }
+}
+
 function bindToolbar(): void {
     const applyFilters = () => currentApi()?.search(collectFiltering());
 
@@ -67,16 +79,7 @@ function bindToolbar(): void {
     });
 
     byId<HTMLSelectElement>('select-theme')?.addEventListener('change', (event) => {
-        const theme = (event.target as HTMLSelectElement).value as SnapTheme;
-        currentApi()?.setTheme(theme);
-        if (theme === 'default') {
-            document.documentElement.removeAttribute('data-bs-theme');
-        } else {
-            document.documentElement.setAttribute(
-                'data-bs-theme',
-                theme === 'light' ? 'light' : 'dark'
-            );
-        }
+        applyTheme((event.target as HTMLSelectElement).value as SnapTheme);
     });
 
     byId<HTMLSelectElement>('select-language')?.addEventListener('change', (event) => {
@@ -98,7 +101,20 @@ function bindToolbar(): void {
         if (format) format.value = RenderType.TABLE;
         if (theme) theme.value = 'dark';
         if (language) language.value = 'en_US';
+
         currentApi()?.reset();
+        currentApi()?.setFormat(RenderType.TABLE);
+        applyTheme('dark');
+        void currentApi()?.setLanguage('en_US');
+    });
+
+    byId<HTMLElement>('container-table')?.addEventListener('click', (event) => {
+        const button = (event.target as HTMLElement).closest<HTMLButtonElement>('[data-book-id]');
+        if (!button) return;
+        const book = currentApi()
+            ?.getData()
+            .find((row) => String(row.id) === button.dataset.bookId);
+        if (book) window.alert(`${book.title} — ${book.name}`);
     });
 }
 

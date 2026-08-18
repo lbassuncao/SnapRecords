@@ -79,7 +79,7 @@ class MockDataTransfer {
     }
 
     // Sets the drag image (not used in tests)
-    public setDragImage(image: Element, x: number, y: number): void {}
+    public setDragImage(_image: Element, _x: number, _y: number): void {}
 }
 // Assign mock DataTransfer to global scope for JSDOM compatibility
 (global as any).DataTransfer = MockDataTransfer;

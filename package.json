@@ -26,13 +26,13 @@
         "lru-cache": "^11.5.2"
     },
     "types": "./dist/index.d.ts",
-    "main": "./dist/snap-records.umd.js",
+    "main": "./dist/snap-records.umd.cjs",
     "module": "./dist/snap-records.es.js",
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
             "import": "./dist/snap-records.es.js",
-            "require": "./dist/snap-records.umd.js"
+            "require": "./dist/snap-records.umd.cjs"
         },
         "./dist/*": "./dist/*",
         "./lang/*": "./dist/lang/*",
@@ -73,12 +73,12 @@
         "dev": "vite",
         "test": "jest",
         "build:js": "vite build",
-        "preview": "vite preview",
-        "lint": "eslint \"src/**/*.{js,ts}\"",
-        "lint:fix": "eslint \"src/**/*.{js,ts}\" --fix",
+        "lint": "eslint \"src/**/*.{js,ts}\" \"demo/**/*.ts\" \"tests/**/*.ts\"",
+        "lint:fix": "eslint \"src/**/*.{js,ts}\" \"demo/**/*.ts\" \"tests/**/*.ts\" --fix",
         "build": "npm run build:js && npm run build:css && mkdir -p dist/lang && cp src/lang/*.json dist/lang/",
         "demo:dev": "vite demo --config vite.config.demo.ts",
         "demo:build": "vite build demo --config vite.config.demo.ts",
+        "demo:preview": "vite preview demo --config vite.config.demo.ts",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "build:css": "sass src/scss/SnapRecords.scss dist/snap-records.css --style=compressed --source-map"

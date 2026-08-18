@@ -49,6 +49,7 @@ export class Configuration<T extends Identifiable & Record<string, unknown>> {
     private validate(): void {
         this.validateUrl();
         this.validateColumns();
+        this.validateHeaderCellClasses();
         this.validateRowsPerPage();
         this.validateFiltering();
         this.validateSorting();
@@ -143,6 +144,26 @@ export class Configuration<T extends Identifiable & Record<string, unknown>> {
                 LogLevel.WARN,
                 'The number of columns does not match the number of column titles.'
             );
+        }
+    }
+
+    // Validates the headerCellClasses option
+    private validateHeaderCellClasses(): void {
+        const headerCellClasses = this.options.headerCellClasses;
+        if (!headerCellClasses || !Array.isArray(headerCellClasses)) return;
+        // Header cell classes are applied to header cells by column index (SnapRenderer,
+        // reorderColumns, and StateManager column-order restore all assume this positional
+        // mapping), so a length that doesn't match columns silently misaligns classes
+        // across columns once they get reordered. An empty array is a valid "no classes" state.
+        if (
+            headerCellClasses.length !== 0 &&
+            headerCellClasses.length !== this.options.columns.length
+        ) {
+            this.logger(
+                LogLevel.WARN,
+                'The number of headerCellClasses does not match the number of columns. Falling back to [].'
+            );
+            this.options.headerCellClasses = [];
         }
     }
 

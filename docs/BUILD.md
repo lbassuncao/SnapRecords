@@ -16,18 +16,18 @@ Runtime dependencies (`dexie`, `immer`, `lru-cache`) and the toolchain (`vite`, 
 
 Defined in `package.json`:
 
-| Script                      | What it does                                                                  |
-| --------------------------- | ----------------------------------------------------------------------------- |
-| `npm run dev`               | Vite library dev server                                                       |
-| `npm run build`             | JS bundle + CSS + copy `src/lang/*.json` → `dist/lang/`                       |
-| `npm run build:js`          | `vite build` only (`snap-records.es.js`, `snap-records.umd.js`, `index.d.ts`) |
-| `npm run build:css`         | Sass → `dist/snap-records.css` (compressed, source map)                       |
-| `npm test`                  | Jest + JSDOM (`tests/`)                                                       |
-| `npm run preview`           | Preview `dist/`                                                               |
-| `npm run lint` / `lint:fix` | ESLint on `src/**/*.{js,ts}`                                                  |
-| `npm run format`            | Prettier on the whole repo (`prettier --write .`)                             |
-| `npm run demo:dev`          | Demo app (`vite.config.demo.ts`)                                              |
-| `npm run demo:build`        | Production build of the demo                                                  |
+| Script                      | What it does                                                                   |
+| --------------------------- | ------------------------------------------------------------------------------ |
+| `npm run dev`               | Vite library dev server                                                        |
+| `npm run build`             | JS bundle + CSS + copy `src/lang/*.json` → `dist/lang/`                        |
+| `npm run build:js`          | `vite build` only (`snap-records.es.js`, `snap-records.umd.cjs`, `index.d.ts`) |
+| `npm run build:css`         | Sass → `dist/snap-records.css` (compressed, source map)                        |
+| `npm test`                  | Jest + JSDOM (`tests/`)                                                        |
+| `npm run demo:preview`      | Preview the built demo (`demo/dist/`), including the mock `/api/books`         |
+| `npm run lint` / `lint:fix` | ESLint on `src/**/*.{js,ts}`, `demo/**/*.ts`, and `tests/**/*.ts`              |
+| `npm run format`            | Prettier on the whole repo (`prettier --write .`)                              |
+| `npm run demo:dev`          | Demo app (`vite.config.demo.ts`)                                               |
+| `npm run demo:build`        | Production build of the demo                                                   |
 
 ```bash
 npm run build
@@ -46,8 +46,8 @@ dist/
 ├── snap-records.css.map
 ├── snap-records.es.js
 ├── snap-records.es.js.map
-├── snap-records.umd.js
-└── snap-records.umd.js.map
+├── snap-records.umd.cjs
+└── snap-records.umd.cjs.map
 ```
 
 The package exports `snap-records/lang/*` from `dist/lang/*` and `snap-records/style.css` from `dist/snap-records.css`.
@@ -71,7 +71,7 @@ The demo mock API in `vite.config.demo.ts` reads `currentPage` and `rowsPerPage`
 
 Library mode, entry `src/index.ts`, name `SnapRecords`:
 
-- Output: `dist/snap-records.{es,umd}.js`
+- Output: `dist/snap-records.es.js` (ESM) and `dist/snap-records.umd.cjs` (UMD/CommonJS — `.cjs`, not `.js`, so `require()` works under this package's `"type": "module"`)
 - `sourcemap: true`
 - `minify: 'terser'` with `drop_console` and `drop_debugger`
 - `vite-plugin-dts`: `bundleTypes: true`, `processor: 'ts'`, `insertTypesEntry: true` → single `dist/index.d.ts`

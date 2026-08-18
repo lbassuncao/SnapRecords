@@ -172,16 +172,8 @@ export const config = {
         paginationContainer: 'snap-pagination-container',
         // Class for pagination elements
         pagination: 'snap-pagination',
-        // Class for pagination cells
-        paginationCell: 'snap-pagination-cell',
         // Class for the loading overlay
         loadingOverlay: 'snap-loading-overlay',
-        // Class for table overlay
-        tableOverlay: 'snap-table-overlay',
-        // Class for list overlay
-        listOverlay: 'snap-list-overlay',
-        // Class for cards overlay
-        cardsOverlay: 'snap-cards-overlay',
         // Class for no-data message
         noData: 'snap-no-data',
         // Class for selected rows

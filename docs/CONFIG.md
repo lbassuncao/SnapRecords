@@ -143,7 +143,7 @@ import 'snap-records/style.css';
     Milliseconds to wait after pagination, search, or other state changes before `loadData()`. Default `250`.
 
 14. **headerCellClasses** (`string[]`, optional)  
-    Header CSS classes in `TABLE` mode. Include `no-sorting` to disable sort on that column.
+    Header CSS classes in `TABLE` mode. Include `no-sorting` to disable sort on that column. Classes are applied to headers by position, so the array length must match `columns`; a mismatched, non-empty array logs a warning and falls back to `[]`.
 
 15. **cacheExpiry** (`number`, optional)  
     Cache lifetime in milliseconds. Default `28800000` (8 hours). Used when `useCache` is `true`.
@@ -305,8 +305,8 @@ Framework wrappers sync `theme`, `language`, `format`, `filtering`, `sorting`, a
 ## Common Configuration Errors
 
 ```typescript
-new SnapRecords('table-container', { url: 'invalid-url', columns: ['id', 'name'] });
-// SnapRecordsConfigError: "Invalid URL provided: invalid-url"
+new SnapRecords('table-container', { url: 'http://', columns: ['id', 'name'] });
+// SnapRecordsConfigError: "Invalid URL provided: http://"
 
 new SnapRecords('table-container', { url: 'https://api.example.com', columns: [] });
 // SnapRecordsConfigError: "Columns option must be a non-empty array."

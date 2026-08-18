@@ -58,7 +58,7 @@ To quickly set up SnapRecords:
    If using a bundler (Vite, Webpack, etc.):
 
     ```typescript
-    import 'snap-records/dist/snap-records.css';
+    import 'snap-records/style.css';
     ```
 
     Or via HTML:
@@ -330,6 +330,7 @@ Translations are loaded from `{langPath}/{language}.json` (default `/lang/en_US.
     "jumpToPage": "Jump to page",
     "retry": "Retry",
     "dragColumn": "Drag column {col}",
+    "rowsPerPageChanged": "Rows per page changed to {count}",
     "errors": {
         "containerNotFound": "Container not found.",
         "invalidConfig": "Invalid configuration.",
@@ -405,6 +406,10 @@ npm test
 Add custom translations by creating a JSON file that matches `src/lang/en_US.json` and serving it from `langPath`.
 
 Customize rendering or event handling by providing custom `renderer`, `eventManager`, `stateManager`, `urlManager`, or `cacheManager` in the options.
+
+### Framework Wrappers
+
+React, Vue, Svelte, and Angular wrapper components live in [`wrappers/`](https://github.com/lbassuncao/SnapRecords/tree/main/wrappers) on GitHub (`SnapRecordsReact.tsx`, `SnapRecordsVue.vue`, `SnapRecords.svelte`, `snap-records.component.ts`). They are **not** published in the `snap-records` npm package and are not importable from it (there is no `snap-records/wrappers/*` export) — each one needs to be compiled by your own app's toolchain (JSX, SFC, Angular CLI, etc.), so copy the file for your framework straight into your project's source tree and adjust the import path to `snap-records`. See [CONFIG.md](https://github.com/lbassuncao/SnapRecords/blob/main/docs/CONFIG.md#public-api-getapi) for what they sync automatically, and [RELEASES.md](https://github.com/lbassuncao/SnapRecords/blob/main/RELEASES.md#framework-wrappers) for their exact behavior.
 
 ## Additional Notes
 

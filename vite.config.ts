@@ -46,7 +46,9 @@ export default defineConfig(({ mode }) => ({
         lib: {
             name: 'SnapRecords',
             entry: path.resolve(import.meta.dirname, 'src/index.ts'),
-            fileName: (format) => `snap-records.${format}.js`,
+            // The UMD build is a CommonJS bundle; ".js" would be loaded as ESM under
+            // this package's "type": "module", leaving it with no exports under require().
+            fileName: (format) => `snap-records.${format}.${format === 'umd' ? 'cjs' : 'js'}`,
         },
     },
 }));
