@@ -55,10 +55,9 @@ export function escapeHTML(str: string): string {
     temp.textContent = str;
     return temp.innerHTML;
 }
-
 export function sanitizeHTML(str: string): string {
-    const temp = document.createElement('div');
-    temp.innerHTML = str;
+    const doc = new DOMParser().parseFromString(str, 'text/html');
+    const temp = doc.body;
 
     temp.querySelectorAll(DANGEROUS_TAGS).forEach((el) => el.remove());
 

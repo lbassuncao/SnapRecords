@@ -178,15 +178,7 @@ export class SnapRecordsDataError extends Error {
 
 export type SnapTheme = 'light' | 'dark' | 'default';
 
-export interface ButtonConfig {
-    classNames: {
-        base: string;
-        disabled?: string;
-        active?: string;
-    };
-    isHtml?: boolean;
-    template?: (page: number | string) => string;
-}
+
 
 // Type defining a sort condition as a tuple of column name and direction
 export type SortCondition = [string, OrderDirection];
@@ -239,8 +231,7 @@ export interface LifecycleHooks<T extends Identifiable & Record<string, unknown>
 }
 
 // Interface for the renderer, handling UI rendering
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export interface ISnapRenderer<T extends Identifiable & Record<string, unknown>> {
+export interface ISnapRenderer {
     // Table body element
     readonly tableBody: HTMLTableSectionElement | null;
     // List container element
@@ -376,7 +367,7 @@ export interface SnapRecordsOptions<T extends Identifiable & Record<string, unkn
     // Optional custom event manager
     eventManager?: (
         parent: SnapRecords<T>,
-        renderer: ISnapRenderer<T>,
+        renderer: ISnapRenderer,
         callbacks: EventManagerCallbacks
     ) => ISnapEventManager;
     // Optional custom state manager
@@ -385,8 +376,8 @@ export interface SnapRecordsOptions<T extends Identifiable & Record<string, unkn
     urlManager?: (parent: SnapRecords<T>) => UrlManager<T>;
     // Optional formatters for custom cell rendering
     columnFormatters?: { [columnKey: string]: (value: unknown, row: T) => string };
-    // Optional custom renderer
-    renderer?: (parent: SnapRecords<T>, container: HTMLElement) => ISnapRenderer<T>;
+    // Custom renderer class or function (factory)
+    renderer?: (parent: SnapRecords<T>, container: HTMLElement) => ISnapRenderer;
     // Optional custom cache manager
     cacheManager?: (parent: SnapRecords<T>, urlManager: UrlManager<T>) => CacheManager<T>;
 }

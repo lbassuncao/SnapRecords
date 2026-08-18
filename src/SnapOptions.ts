@@ -170,8 +170,6 @@ export const config = {
         totals: 'snap-totals',
         // Class for the pagination container
         paginationContainer: 'snap-pagination-container',
-        // Class for pagination elements
-        pagination: 'snap-pagination',
         // Class for the loading overlay
         loadingOverlay: 'snap-loading-overlay',
         // Class for no-data message

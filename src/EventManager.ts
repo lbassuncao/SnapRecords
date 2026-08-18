@@ -37,7 +37,7 @@ export class EventManager<
     // Reference to the parent SnapRecords instance
     #parent: SnapRecords<T>;
     // Renderer instance for updating the UI
-    #renderer: ISnapRenderer<T>;
+    #renderer: ISnapRenderer;
     // Callbacks for handling column reordering and data loading
     #callbacks: EventManagerCallbacks;
     // ID of the column being resized, or null if none
@@ -50,7 +50,7 @@ export class EventManager<
     // Constructor initializes the event manager with parent, renderer, and callbacks
     constructor(
         parent: SnapRecords<T>,
-        renderer: ISnapRenderer<T>,
+        renderer: ISnapRenderer,
         callbacks: EventManagerCallbacks
     ) {
         this.#parent = parent;

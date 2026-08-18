@@ -264,7 +264,7 @@ import 'snap-records/style.css';
     Max LRU entries for formatted cells. Default `500`.
 
 28. **renderer**  
-    `(parent, container) => ISnapRenderer<T>`. Default `SnapRenderer`.
+    `(parent, container) => ISnapRenderer`. Default `SnapRenderer`.
 
 29. **eventManager**  
     `(parent, renderer, callbacks) => ISnapEventManager`. Default `EventManager`.

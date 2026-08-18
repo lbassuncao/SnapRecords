@@ -35,7 +35,7 @@ function addClassTokens(el: Element, classNames: string): void {
 
 export class SnapRenderer<
     T extends Identifiable & Record<string, unknown>,
-> implements ISnapRenderer<T> {
+> implements ISnapRenderer {
     // Container for mobile cards display
     public cardsContainer: HTMLElement | null = null;
     // Main table element for table rendering

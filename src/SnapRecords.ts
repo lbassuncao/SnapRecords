@@ -96,7 +96,7 @@ export class SnapRecords<T extends Identifiable & Record<string, unknown>> {
     // IndexedDB instance for caching data
     public readonly db: SnapRecordsDB<T>;
     // Renderer instance for rendering the UI (table, list, or cards)
-    public readonly renderer: ISnapRenderer<T>;
+    public readonly renderer: ISnapRenderer;
     // Event manager for handling user interactions (clicks, key presses, etc.)
     public readonly eventManager: ISnapEventManager;
     // State manager for updating and persisting state
