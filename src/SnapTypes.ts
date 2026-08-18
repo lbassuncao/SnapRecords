@@ -178,8 +178,6 @@ export class SnapRecordsDataError extends Error {
 
 export type SnapTheme = 'light' | 'dark' | 'default';
 
-
-
 // Type defining a sort condition as a tuple of column name and direction
 export type SortCondition = [string, OrderDirection];
 

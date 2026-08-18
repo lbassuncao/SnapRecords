@@ -14,7 +14,7 @@ import { defineConfig } from 'vite';
 export default defineConfig(({ mode }) => ({
     plugins: [
         dts({
-            processor: 'ts',
+            processor: 'vue',
             tsconfigPath: './tsconfig.json',
             include: ['src'],
             bundleTypes: true,
@@ -41,6 +41,9 @@ export default defineConfig(({ mode }) => ({
             output: {
                 // rename CSS files
                 assetFileNames: 'snap-records.[ext]',
+            },
+            checks: {
+                pluginTimings: false,
             },
         },
         lib: {

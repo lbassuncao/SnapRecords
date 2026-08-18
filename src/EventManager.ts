@@ -48,11 +48,7 @@ export class EventManager<
     #startWidth: number = 0;
 
     // Constructor initializes the event manager with parent, renderer, and callbacks
-    constructor(
-        parent: SnapRecords<T>,
-        renderer: ISnapRenderer,
-        callbacks: EventManagerCallbacks
-    ) {
+    constructor(parent: SnapRecords<T>, renderer: ISnapRenderer, callbacks: EventManagerCallbacks) {
         this.#parent = parent;
         this.#renderer = renderer;
         this.#callbacks = callbacks;
