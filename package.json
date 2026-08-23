@@ -91,6 +91,12 @@
         "node": ">=26.7.0"
     },
     "allowScripts": {
-        "unrs-resolver@1.12.2": true
+        "unrs-resolver@1.12.2": true,
+        "@parcel/watcher": true
+    },
+    "overrides": {
+        "jsdom": "^30.0.1",
+        "test-exclude": "^8.0.0",
+        "glob": "^13.0.6"
     }
 }
