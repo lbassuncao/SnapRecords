@@ -28,6 +28,9 @@ node_modules
 *.xlsx#
 *.swp
 *.swo
+.cursor
+.claude
+.gemini
 # sublime text & textmate
 *.sublime-*
 *.stTheme.cache
